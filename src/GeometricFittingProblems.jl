@@ -52,8 +52,13 @@ function load_problem(filename::String)
 end
 
 
-function solve(prob::FitProbType, θinit::Vector{Float64}, method::String)
-
+function solve(prob::FitProbType,method::String, initθ = CGAHypersphere(prob.data))
+    if method == "CGA-Hypersphere"
+        return CGAHypersphere(prob.data)
+    end
+    if method == "LOVO-CGA-Hypersphere"
+        LOVOCGAHypersphere(prob.data,prob.nout,initθ)
+    end
 end
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
@@ -171,7 +176,158 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             writedlm(io, FileMatrix)
     end
 end
+    
+    
 
+function CGAHypersphere(data;ε = 1.0e-4)
+    (N,n) = size(data)
+    D = [data';ones(1,N)]
+    v = [0.5*norm(D[1:n,i] ,2)^2 for i=1:N ]
+    D = [D ; v']
+    DDt = D*D'
+    M = zeros(n+2,n+2)
+    for i=1:n
+        M[i,i] = 1.0
+    end
+    M[n+1,n+2] = -1.0
+    M[n+2,n+1] = -1.0
+    p = (1.0/N)
+    P = p.*(DDt*M)
+    F = eigen(P)
+    indmin = 1
+    valmin = F.values[1]
+    for i = 2:n
+        if abs(valmin)>abs(F.values[i])
+            if F.values[i]>-ε   
+                indmin = i
+                valmin = F.values[i] 
+            end
+        end
+    end
+    if valmin<-ε
+        error("P does not have postive eigen value!")
+    end
+    xnorm = (1.0/(F.vectors[:,indmin][end-1]))*F.vectors[:,indmin]
+    center = xnorm[1:end-2]
+    
+    return push!(center,√(norm(center,2)^2 -2.0*xnorm[end]))
+            
+    end
+    
+    function sort_sphere_res(P,x,nout)
+    n = length(P[:,1])
+    m = length(P[1,:])
+    v = zeros(n)
+    for i=1:n
+        for j=1:m
+            v[i] = v[i]+(P[i,j]-x[j])^2
+        end
+        v[i] = (v[i]-x[end]^2)^2
+    end
+    indtrust = [1:n;]
+    for i=1:n-nout+1
+        for j=i+1:n
+            if v[i]>v[j] 
+                aux = v[j]
+                v[j] = v[i]
+                v[i] = aux
+                
+                aux2 = indtrust[j]
+                indtrust[j] = indtrust[i]
+                indtrust[i] = aux2
+            end
+        end
+    end
+   
+    return P[indtrust[1:n-nout],:], sum(v[1:n-nout])
+end
+    
+function LOVOCGAHypersphere(data,nout,θ,ε=1.0e-4)
+
+    ordres = sort_sphere_res(data,θ,nout)
+    k = 1
+    antres = 0.0
+    while abs(ordres[2]-antres) > ε
+        display(ordres[2])
+        antres = ordres[2]
+        θ = CGAHypersphere(ordres[1])
+        println(θ)
+        ordres = sort_sphere_res(data,θ,nout)
+        k = k+1
+    end
+    display(k)
+    display(θ)
+
+end
+    
+    function CGAHypercircle(data; ε = 1.0e-4)
+    (N,n) = size(data)
+    p = (1.0/N)
+    H1 = zeros(3,3)
+    H2 = zeros(3,3)
+    H3 = 0.0
+    H4 = 0.0
+    H5 = zeros(3,3)
+    H6 = zeros(3,3)
+    H7 = zeros(3)'
+    H8 = 0.0
+    H9 = zeros(3)'
+    Id = [1 0 0; 0 1 0; 0 0 1]
+    P = zeros(10,10)
+    
+    for i=1:N
+        H1 = H1 + [0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]
+    end
+    for i=1:N
+        H2 = H2 + [0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]^2
+    end
+    for i=1:N
+        H3 = H3 + norm(data[i,:])^2
+    end
+    for i=1:N
+        H4 = H4 + norm(data[i,:])^4
+    end
+    for i=1:N
+        H5 = H5 + ([0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]^3)
+    end
+    for i=1:N
+        H6 = H6 + (norm(data[i,:])^2)*[0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]
+    end
+    for i=1:N
+        H7 = H7 + (norm(data[i,:])^2)*(data[i,:])'
+    end
+    for i=1:N
+        H8 = H8 + norm(data[i,:])^4
+    end
+    for i = 1:N
+        H9 = H9 + data[i,:]'
+    end
+
+
+   P[1:3,1:3] = -H2
+   P[4:6,1:3] = -H1
+   P[7:9,1:3] = H1
+   P[1:3,4:6] = (-0.5)*H6
+   P[4:6,4:6] = H2 + (0.5)*H3*Id
+   P[7:9,4:6] = (0.25)*H8*Id
+   P[10,4:6] = (0.5)*H7
+   P[1:3,7:9] = H1
+   P[4:6,7:9] = Id
+   P[7:9,7:9] = H2 + (0.5)*H3*Id
+   P[10,7:9] = H9
+   P[4:6,10] = -H9'
+   P[7:9,10] =(-0.5)*H7'
+   P[10,10] = -H3
+
+   P = p*P
+
+   F = eigvecs(P)
+  
+    return F
+
+end
+     
+    
 """
     inverse_power_method :: function
 
