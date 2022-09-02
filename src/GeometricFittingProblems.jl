@@ -260,7 +260,7 @@ function LOVOCGAHypersphere(data,nout,θ,ε=1.0e-4)
 
 end
     
-    function CGAHypercircle(data; ε = 1.0e-4)
+function CGAHypercircle(data; ε = 1.0e-4)
     (N,n) = size(data)
     p = (1.0/N)
     H1 = zeros(3,3)
@@ -273,58 +273,60 @@ end
     H8 = 0.0
     H9 = zeros(3)'
     Id = [1 0 0; 0 1 0; 0 0 1]
+    SI = zeros(3,3)
     P = zeros(10,10)
+    Nf = convert(AbstractFloat, N)
     
     for i=1:N
-        H1 = H1 + [0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]
-    end
-    for i=1:N
-        H2 = H2 + [0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]^2
-    end
-    for i=1:N
+        H1 = H1 + [0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; -data[i,2] data[i,1] 0]
+        H2 = H2 + ([0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; -data[i,2] data[i,1] 0])^2
         H3 = H3 + norm(data[i,:])^2
-    end
-    for i=1:N
         H4 = H4 + norm(data[i,:])^4
-    end
-    for i=1:N
-        H5 = H5 + ([0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]^3)
-    end
-    for i=1:N
-        H6 = H6 + (norm(data[i,:])^2)*[0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; data[i,2] data[i,1] 0]
-    end
-    for i=1:N
+        H5 = H5 + ([0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; -data[i,2] data[i,1] 0]^3)
+        H6 = H6 + (norm(data[i,:])^2)*[0 -data[i,3] data[i,2]; data[i,3] 0 -data[i,1]; -data[i,2] data[i,1] 0]
         H7 = H7 + (norm(data[i,:])^2)*(data[i,:])'
-    end
-    for i=1:N
         H8 = H8 + norm(data[i,:])^4
-    end
-    for i = 1:N
         H9 = H9 + data[i,:]'
+        SI = SI + [1 0 0; 0 1 0; 0 0 1]
     end
-
-
+    println(SI)
    P[1:3,1:3] = -H2
    P[4:6,1:3] = -H1
    P[7:9,1:3] = H1
-   P[1:3,4:6] = (-0.5)*H6
-   P[4:6,4:6] = H2 + (0.5)*H3*Id
-   P[7:9,4:6] = (0.25)*H8*Id
-   P[10,4:6] = (0.5)*H7
+   P[1:3,4:6] = (-1/2)*H6
+   P[4:6,4:6] = H2 + (1/2)*H3*Id
+   P[7:9,4:6] = (1/4)*H8*Id
+   P[10,4:6] = (1/2)*H7
    P[1:3,7:9] = H1
-   P[4:6,7:9] = Id
-   P[7:9,7:9] = H2 + (0.5)*H3*Id
+   P[4:6,7:9] = SI
+   P[7:9,7:9] = H2 + (1/2)*H3*Id
    P[10,7:9] = H9
    P[4:6,10] = -H9'
-   P[7:9,10] =(-0.5)*H7'
+   P[7:9,10] =(-1/2)*H7'
    P[10,10] = -H3
+   P = p.*(P)
+   F = eigen(P)
+   indmin = 1
+   valmin = F.values[1]
+   for i = 2:10
+       if abs(valmin)>abs(F.values[i])
+           if F.values[i]>-ε   
+               indmin = i
+               valmin = F.values[i] 
+           end
+       end
+   end
+   if valmin<-ε
+       error("P does not have postive eigen value!")
+   end
 
-   P = p*P
+   A = F.vectors[:,indmin]
 
-   F = eigvecs(P)
-  
-    return F
+   αn = A[4:6]
+   B0,B1,B2,B3 = -A[10], A[1], A[2], A[3]
+   c = [B0 -B3 B2; B3 B0 -B1; -B2 B1 B0]*(-αn/norm(αn)) 
 
+ return c
 end
      
     
