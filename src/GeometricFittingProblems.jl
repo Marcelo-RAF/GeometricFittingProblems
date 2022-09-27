@@ -69,43 +69,49 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         u = [params[5], params[6], params[7]]
         v = [params[8], params[9], params[10]]
         npts = Int(params[11])
-        λ = [0:0.8:60;]
-        μ = [-30:30;]
-        w = zeros(Int(3.0),npts)
-        h = zeros(Int(3.0), npts)
+        λ = [1:1.1:300;]
+        μ = [1:3000;]
+        w = zeros(Int(3.0), npts)
+        #h = zeros(Int(3.0), npts)
         nn = zeros(npts)
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
-        for i=1:Int(round(npts/2))-1
-            w[:,i] = c+ r*((λ[i]*u + μ[i]*v)/(norm(λ[i]*u + μ[i]*v)))
+        for i = 1:Int(round(npts / 4))-1
+            w[:, i] = c + r * ((u + μ[i] * v) / (norm(u + μ[i] * v)))
         end
-        for j = Int(round(npts/2)):npts
-            w[:,j] = c+ r*(((-λ[j])*u + (-μ[j])*v)/(norm((-λ[j])*u + (-μ[j])*v)))
-        end          
-      nout = Int(params[12])
-      k = 1
-      iout = []
-      while k <= nout
-          i = rand([1:npts;])
-          if i ∉ iout
-              push!(iout, i)
-              k = k + 1
-          end
-      end
-      for k = 1:nout
-        w[:,iout[k]]=w[:,iout[k]]+[rand([0.25*r:0.1*(r);(1+0.25)*r]), rand([0.25*r:0.1*(r);(1+0.25)*r]), rand([0.25*r:0.1*(r);(1+0.25)*r])]
-      end
-      for i=1:npts
-        x[i] = w[1,i]
-        y[i] = w[2,i]
-        z[i] = w[3,i]
-      end
-      FileMatrix = ["name :" "circle3d";"data :" [[x y z]]; "npts :" npts;"nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2";"dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c,r)]; "description :" "none"]
-      
-      open("circle3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io
-         writedlm(io, FileMatrix)
-      end
+        for j = Int(round(npts / 4)):Int(round(npts / 2))-1
+           w[:, j] = c + r * ((-u + (μ[j]) * v) / (norm(-u + (μ[j]) * v)))
+        end
+        for i = Int(round(npts / 2)):Int(round(3*npts / 4))-1
+            w[:, i] = c + r * ((u - μ[i] * v) / (norm(u - μ[i] * v)))
+        end
+        for i = Int(round(3*npts / 4)):npts
+            w[:, i] = c + r * ((-u - μ[i]*v) / (norm(-u - μ[i]*v)))
+        end
+        nout = Int(params[12])
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        for k = 1:nout
+            w[:, iout[k]] = w[:, iout[k]] + [rand([0.25*r:0.1*(r); (1 + 0.25) * r]), rand([0.25*r:0.1*(r); (1 + 0.25) * r]), rand([0.25*r:0.1*(r); (1 + 0.25) * r])]
+        end
+        for i = 1:npts
+            x[i] = w[1, i]
+            y[i] = w[2, i]
+            z[i] = w[3, i]
+        end
+        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
+
+        open("circle3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
     end
     if probtype == "sphere2D"
         println("params need to be setup as [center,radious,npts,nout]")
