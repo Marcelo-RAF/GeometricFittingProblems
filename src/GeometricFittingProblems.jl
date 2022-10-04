@@ -62,32 +62,37 @@ function solve(prob::FitProbType,method::String, initθ = CGAHypersphere(prob.da
 end
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
-    if probtype == "circle3d"
+   if probtype == "circle3d"
         println("params need to be setup as [center,radious,npts,nout]")
         c = [params[1], params[2], params[3]]
         r = params[4]
         u = [params[5], params[6], params[7]]
         v = [params[8], params[9], params[10]]
         npts = Int(params[11])
-        λ = [1:1.1:300;]
-        μ = [1:3000;]
+        u = u/norm(u)
+        h = v - (dot(v,u)/norm(u)^2)*u
+        v = h/norm(h)
+        display(u)
+        display(v)
+        λ = [0:4/npts:1;]
+        println(λ)
         w = zeros(Int(3.0), npts)
         #h = zeros(Int(3.0), npts)
         nn = zeros(npts)
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
-        for i = 1:Int(round(npts / 4))-1
-            w[:, i] = c + r * ((u + μ[i] * v) / (norm(u + μ[i] * v)))
+        for i = 1:Int(round(npts / 4))
+            w[:, i] = c + r * ((λ[i]*u +  (1-λ[i])* v) / (norm(λ[i]*u + (1-λ[i])* v)))
         end
-        for j = Int(round(npts / 4)):Int(round(npts / 2))-1
-           w[:, j] = c + r * ((-u + (μ[j]) * v) / (norm(-u + (μ[j]) * v)))
+        for i = (Int(round(npts / 4))+1):Int(round(npts / 2))
+           w[:, i] = c + r * ((λ[i-(Int(round(npts / 4)))]*(-u) + (1-λ[i-(Int(round(npts / 4)))])*v) / (norm(λ[i-(Int(round(npts / 4)))]*(-u) + (1-λ[i-(Int(round(npts / 4)))]) * v)))
         end
-        for i = Int(round(npts / 2)):Int(round(3*npts / 4))-1
-            w[:, i] = c + r * ((u - μ[i] * v) / (norm(u - μ[i] * v)))
+        for i = (Int(round(npts / 2))+1):Int(round(3*npts / 4))
+            w[:, i] = c + r * ((λ[i-(Int(round(npts / 2)))]*u + (1-λ[i-(Int(round(npts / 2)))])*(-v)) / (norm(λ[i-(Int(round(npts / 2)))]*u + (1-λ[i-(Int(round(npts / 2)))])*(-v))))
         end
-        for i = Int(round(3*npts / 4)):npts
-            w[:, i] = c + r * ((-u - μ[i]*v) / (norm(-u - μ[i]*v)))
+        for i = (Int(round(3*npts / 4))+1):npts
+            w[:, i] = c + r * ((λ[i-(Int(round(3*npts / 4)))]*(-u) + (1-λ[i-(Int(round(3*npts / 4)))])*(-v)) / (norm((λ[i-(Int(round(3*npts / 4)))]*(-u) + (1-λ[i-(Int(round(3*npts / 4)))])*(-v)))))
         end
         nout = Int(params[12])
         k = 1
@@ -282,10 +287,10 @@ function CGAHypercircle(data; ε=1.0e-4)
     Nf = convert(AbstractFloat, N)
 
     for i = 1:N
-        H1 = H1 + [0 -data[i, 3] data[i, 2]; data[i, 3] 0 -data[i, 1]; -data[i, 2] data[i, 1] 0]
-        H2 = H2 + ([0 -data[i, 3] data[i, 2]; data[i, 3] 0 -data[i, 1]; -data[i, 2] data[i, 1] 0])^2
+        H1 = H1 + [0.0 -data[i, 3] data[i, 2]; data[i, 3] 0.0 -data[i, 1]; -data[i, 2] data[i, 1] 0.0]
+        H2 = H2 + ([0.0 -data[i, 3] data[i, 2]; data[i, 3] 0.0 -data[i, 1]; -data[i, 2] data[i, 1] 0.0])^2
         H3 = H3 + norm(data[i, :])^2
-        H4 = H4 + (norm(data[i, :])^2) * [0 -data[i, 3] data[i, 2]; data[i, 3] 0 -data[i, 1]; -data[i, 2] data[i, 1] 0]
+        H4 = H4 + (norm(data[i, :])^2) * [0.0 -data[i, 3] data[i, 2]; data[i, 3] 0.0 -data[i, 1]; -data[i, 2] data[i, 1] 0.0]
         H5 = H5 + (norm(data[i, :])^2) * (data[i, :])'
         H6 = H6 + norm(data[i, :])^4
         H7 = H7 + data[i, :]'
@@ -294,16 +299,16 @@ function CGAHypercircle(data; ε=1.0e-4)
     P[1:3, 1:3] = -H2
     P[4:6, 1:3] = -H1
     P[7:9, 1:3] = H1
-    P[1:3, 4:6] = (-1 / 2) * H4
-    P[4:6, 4:6] = H2 + (1 / 2) * H3 * Id
-    P[7:9, 4:6] = (1 / 4) * H6 * Id
-    P[10, 4:6] = (1 / 2) * H5
+    P[1:3, 4:6] = -(1/2)*H4
+    P[4:6, 4:6] = H2 + (1/2)*H3*Id
+    P[7:9, 4:6] = (1/4)*H6*Id
+    P[10, 4:6] = (1/2)*H5
     P[1:3, 7:9] = H1
     P[4:6, 7:9] = SI
-    P[7:9, 7:9] = H2 + (1 / 2) * H3 * Id
+    P[7:9, 7:9] = H2+(1/2)*H3*Id
     P[10, 7:9] = H7
     P[4:6, 10] = -H7'
-    P[7:9, 10] = (-1 / 2) * H5'
+    P[7:9, 10] = -(1/2)*H5'
     P[10, 10] = -H3
     P = p .* (P)
     F = eigen(P)
@@ -320,13 +325,16 @@ function CGAHypercircle(data; ε=1.0e-4)
     if valmin < -ε
         error("P does not have postive eigen value!")
     end
-
     A = F.vectors[:, indmin]
-
-    αn = A[4:6]
+    αn = -A[4:6]
+    α = norm(αn)
+    n = αn/α
     B0, B1, B2, B3 = -A[10], A[1], A[2], A[3]
-    c = [B0 -B3 B2; B3 B0 -B1; -B2 B1 B0] * (-αn / norm(αn))
-    return c
+    c = [B0 -B3 B2; B3 B0 -B1; -B2 B1 B0] * (n/α)
+    vinf = A[7:9]
+    r = sqrt(norm(c)^2 -2*dot(n,vinf)/α - 2*(dot(c,n))^2)
+
+    return c, r
 end
      
     
