@@ -2,7 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra
 
-export load_problem, solve, build_problem, inverse_power_method
+export load_problem, solve, build_problem, inverse_power_method, solve2
 
 import Base.show
 
@@ -58,6 +58,15 @@ function solve(prob::FitProbType,method::String, initθ = CGAHypersphere(prob.da
     end
     if method == "LOVO-CGA-Hypersphere"
         LOVOCGAHypersphere(prob.data,prob.nout,initθ)
+    end
+end
+
+function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.data))
+    if method == "CGA-Hypercircle"
+        return CGAHypercircle(prob.data)
+    end
+    if method == "LOVO-CGA-Hypercircle"
+       return LOVOCGAHypercircle(prob.data, prob.nout, initθ)
     end
 end
 
@@ -298,7 +307,7 @@ function CGAHypercircle(data; ε=1.0e-4)
     end
     P[1:3, 1:3] = -H2
     P[4:6, 1:3] = -H1
-    P[7:9, 1:3] = H1
+    P[7:9, 1:3] = (0.5)*H4
     P[1:3, 4:6] = -(1/2)*H4
     P[4:6, 4:6] = H2 + (1/2)*H3*Id
     P[7:9, 4:6] = (1/4)*H6*Id
@@ -326,15 +335,54 @@ function CGAHypercircle(data; ε=1.0e-4)
         error("P does not have postive eigen value!")
     end
     A = F.vectors[:, indmin]
-    αn = -A[4:6]
-    α = norm(αn)
-    n = αn/α
-    B0, B1, B2, B3 = -A[10], A[1], A[2], A[3]
-    c = [B0 -B3 B2; B3 B0 -B1; -B2 B1 B0] * (n/α)
-    vinf = A[7:9]
-    r = sqrt(norm(c)^2 -2*dot(n,vinf)/α - 2*(dot(c,n))^2)
+    n1 = -A[4:6]
+    d1, d2, d3 = n1[1], n1[2], n1[3]
+    C = [d1 d2 d3; 0 d3 -d2; -d3 0 d1; d2 -d1 0];
+    α = norm(A[4:6])
+    center = [A[10]; A[1:3]]'/-C'    #talvez tenha que alterar 
+    n1 = n1/α
+    radius = (center*center' - 2*n1'*A[7:9]/α - 2*(n1'*center')^2)
 
-    return c, r
+    u = [n1[1], n1[2], n1[3], center[1], center[2], center[3], sqrt(radius)]
+    return u
+end
+
+
+function sort_circle_res(P,x,nout)
+    N = length(P[:, 1])
+    M = length(P[1, :])
+    v = zeros(N)
+    for i = 1:N
+            v[i] = v[i] + (norm(P[i, :] - x[1:3])^2-x[7]^2)^2 + (dot(P[i,:]-x[1:3],x[4:6]))^2  
+    end
+    indtrust = [1:N;]
+    for i = 1:N-nout+1
+        for j = i+1:N
+            if v[i] > v[j]
+                aux = v[j]
+                v[j] = v[i]
+                v[i] = aux
+
+                aux2 = indtrust[j]
+                indtrust[j] = indtrust[i]
+                indtrust[i] = aux2
+            end
+        end
+    end
+    return P[indtrust[1:N-nout], :], sum(v[1:N-nout])
+end
+
+function LOVOCGAHypercircle(data, nout, θ , ε=1.0e-4 )
+    ordres = sort_circle_res(data,θ,nout)
+    k = 1
+    antres = 0.0
+    while (ordres[2] - antres)> ε
+        antres = ordres[2]
+        θ = CGAHypercircle(ordres[1])
+        ordres = sort_circle_res(data, θ, nout)
+        k = k+1
+    end
+    return θ
 end
      
     
