@@ -114,8 +114,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            w[:, iout[k]] = w[:, iout[k]] + [rand([0.25*r:0.1*(r); (1 + 0.25) * r]), rand([0.25*r:0.1*(r); (1 + 0.25) * r]), rand([0.25*r:0.1*(r); (1 + 0.25) * r])]
-        end
+           w[:, iout[k]] = w[:, iout[k]] + [rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;])]
         for i = 1:npts
             x[i] = w[1, i]
             y[i] = w[2, i]
@@ -150,8 +149,8 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([0.25*r:0.1*(r); (1 + 0.25) * r])
-            y[iout[k]] = y[iout[k]] + rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            x[iout[k]] = x[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
         end
         FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 - (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
 
@@ -186,9 +185,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([0.25*r:0.1*(r); (1 + 0.25) * r])
-            y[iout[k]] = y[iout[k]] + rand([0.25*r:0.1*(r); (1 + 0.25) * r])
-            z[iout[k]] = z[iout[k]] + rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            x[iout[k]] = x[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
+            z[iout[k]] = z[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
         end
         FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 - (x[2]-t[2])^2 -(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
 
