@@ -195,6 +195,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             writedlm(io, FileMatrix)
     end
 end
+end
     
     
 
@@ -351,8 +352,12 @@ function sort_circle_res(P,x,nout)
     N = length(P[:, 1])
     M = length(P[1, :])
     v = zeros(N)
-    for i = 1:N
-            v[i] = v[i] + (norm(P[i, :] - x[1:3])^2-x[7]^2)^2 + (dot(P[i,:]-x[1:3],x[4:6]))^2  
+   for i=1:N
+        a[i] = (dot(P[i,:]-x[4:6],x[1:3]))^2
+        for j=1:M
+            v[i] = v[i] + (P[i, j] - x[3+j])^2 
+        end
+        v[i] = (v[i] - x[7]^2)^2 + a[i]
     end
     indtrust = [1:N;]
     for i = 1:N-nout+1
@@ -375,7 +380,7 @@ function LOVOCGAHypercircle(data, nout, θ , ε=1.0e-4 )
     ordres = sort_circle_res(data,θ,nout)
     k = 1
     antres = 0.0
-    while (ordres[2] - antres)> ε
+    while (ordres[2] - antres)> ε #pensar em outra estrategia
         antres = ordres[2]
         θ = CGAHypercircle(ordres[1])
         ordres = sort_circle_res(data, θ, nout)
