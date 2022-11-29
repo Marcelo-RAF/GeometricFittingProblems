@@ -71,7 +71,7 @@ function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.da
 end
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
-   if probtype == "circle3d"
+    if probtype == "circle3d"
         println("params need to be setup as [center,radious,npts,nout]")
         c = [params[1], params[2], params[3]]
         r = params[4]
@@ -114,7 +114,8 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-           w[:, iout[k]] = w[:, iout[k]] + [rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;])]
+            w[:, iout[k]] = w[:, iout[k]] + [rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;])]
+        end
         for i = 1:npts
             x[i] = w[1, i]
             y[i] = w[2, i]
@@ -150,9 +151,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         for k = 1:nout
             x[iout[k]] = x[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
-            y[iout[k]] = y[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
-        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 - (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
+        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
 
         open("sphere2D_$(c[1])_$(c[2])_$(c[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -161,7 +162,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
     end
     if probtype == "sphere3D"
         println("params need to be setup as [center,radious,npts,nout]")
-        c = [params[1], params[2], params[5]]
+        c = [params[1], params[2], params[3]]
         r = params[4]
         npts = Int(params[5])
         x = zeros(npts)
@@ -189,12 +190,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 - (x[2]-t[2])^2 -(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
 
-        open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(nout).csv", "w") do io #o que essa linha faz exatamente?
+        open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io #o que essa linha faz exatamente?
             writedlm(io, FileMatrix)
+        end
     end
-end
+
 end
     
     
@@ -352,6 +354,7 @@ function sort_circle_res(P,x,nout)
     N = length(P[:, 1])
     M = length(P[1, :])
     v = zeros(N)
+    a = zeros(N)
    for i=1:N
         a[i] = (dot(P[i,:]-x[4:6],x[1:3]))^2
         for j=1:M
@@ -376,11 +379,11 @@ function sort_circle_res(P,x,nout)
     return P[indtrust[1:N-nout], :], sum(v[1:N-nout])
 end
 
-function LOVOCGAHypercircle(data, nout, θ , ε=1.0e-4 )
+function LOVOCGAHypercircle(data, nout, θ , ε=1.0e-8 )
     ordres = sort_circle_res(data,θ,nout)
     k = 1
     antres = 0.0
-    while (ordres[2] - antres)> ε #pensar em outra estrategia
+    while abs(ordres[2] - antres)> ε #pensar em outra estrategia
         antres = ordres[2]
         θ = CGAHypercircle(ordres[1])
         ordres = sort_circle_res(data, θ, nout)
