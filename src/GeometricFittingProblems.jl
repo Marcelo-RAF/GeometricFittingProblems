@@ -244,7 +244,7 @@ function CGAHypersphere(data;ε = 1.0e-4)
         for j=1:m
             v[i] = v[i]+(P[i,j]-x[j])^2
         end
-        v[i] = (v[i]-x[end]^2)^2
+         v[i] = abs(v[i] - x[end]^2)
     end
     indtrust = [1:n;]
     for i=1:n-nout+1
@@ -356,11 +356,11 @@ function sort_circle_res(P,x,nout)
     v = zeros(N)
     a = zeros(N)
    for i=1:N
-        a[i] = (dot(P[i,:]-x[4:6],x[1:3]))^2
+        a[i] = abs(dot(P[i,:]-x[4:6],x[1:3]))
         for j=1:M
             v[i] = v[i] + (P[i, j] - x[3+j])^2 
         end
-        v[i] = (v[i] - x[7]^2)^2 + a[i]
+        v[i] = abs(v[i] - x[7]^2) + a[i]
     end
     indtrust = [1:N;]
     for i = 1:N-nout+1
