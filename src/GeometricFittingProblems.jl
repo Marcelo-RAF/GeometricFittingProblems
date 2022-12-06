@@ -430,6 +430,27 @@ function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-
     end
 end
 
+function visualize(prob, answer)
+
+    plt = plot()
+    if prob.name == "sphere2D" || prob.name == "\tsphere2D"
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal)
+        θ = [0.0:2*π/360:2*π;]
+        x = answer[1] .+ answer[3] * cos.(θ)
+        y = answer[2] .+ answer[3] * sin.(θ)
+        plot!(plt, x, y)
+        display(plt)
+    end
+end
+
+function visucircle(prob)
+    plt = plot()
+    if prob.name == "circle3D" || prob.name == "\tcircle3d"
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:,3] ,line=:scatter, aspect_ratio=:equal)
+        display(plt)
+    end
+end
+
 function show(io::IO, fout::FitOutputType)
 
     print(io, "  ▶ Output ◀ \n")
