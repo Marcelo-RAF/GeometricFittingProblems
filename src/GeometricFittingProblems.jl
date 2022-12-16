@@ -116,10 +116,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         for k = 1:nout
             w[:, iout[k]] = w[:, iout[k]] + [rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;])]
         end
+       G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i]
-            y[i] = w[2, i]
-            z[i] = w[3, i]
+            x[i] = w[1, i] + G[1,i] 
+            y[i] = w[2, i] + G[2,i]
+            z[i] = w[3, i] + G[3,i] 
         end
         FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
 
@@ -135,9 +136,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         x = zeros(npts)
         y = zeros(npts)
         θ = [0.0:2*π/(npts-1):2*π;]
-        for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k])
-            y[k] = c[2] + r * sin(θ[k])
+        ruid = randn(2,npts)
+       for k = 1:npts
+            x[k] = c[1] + r * cos(θ[k]) + ruid[1,k]
+            y[k] = c[2] + r * sin(θ[k]) + ruid[2,k] 
         end
         nout = Int(params[5])
         k = 1
@@ -170,10 +172,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         z = zeros(npts)
         θ = [0.0:2*π/(npts-1):2*π;]
         φ = [0.0:π/(npts-1):π;]
+        rd = randn(3,npts)
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k])
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k])
-            z[k] = c[3] + r * cos(φ[k])
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1,k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2,k]
+            z[k] = c[3] + r * cos(φ[k]) + rd[3,k]
         end
         nout = Int(params[6])
         k = 1
@@ -434,11 +437,53 @@ function visualize(prob, answer)
 
     plt = plot()
     if prob.name == "sphere2D" || prob.name == "\tsphere2D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal)
+         plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
         θ = [0.0:2*π/360:2*π;]
-        x = answer[1] .+ answer[3] * cos.(θ)
-        y = answer[2] .+ answer[3] * sin.(θ)
-        plot!(plt, x, y)
+        xs = answer[1] .+ answer[3] * cos.(θ)
+        ys = answer[2] .+ answer[3] * sin.(θ)
+        x = prob.solution[1] .+ prob.solution[3]* cos.(θ)
+        y = prob.solution[2] .+ prob.solution[3]* sin.(θ)
+        plot!(plt, xs, ys, color=:red, lab = "solução do algoritmo")
+        plot!(plt, x, y, color=:green, lab = "solução perfeita")
+        display(plt)
+    end
+    if prob.name == "sphere3D" || prob.name == "\tsphere3D"
+       plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:,3], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
+        n = 100
+        h1 = zeros(n)
+        h2 = zeros(n)
+        h3 = zeros(n)
+        h4 = zeros(n)
+        for i=1:n
+            h1[i] = prob.solution[1]
+            h2[i] = prob.solution[2]
+            h3[i] = prob.solution[3]
+            h4[i] = prob.solution[4]
+         end
+        u = range(-π, π; length = n)
+        v = range(0, π; length = n)
+        x = h1 .+ prob.solution[4] * cos.(u)* sin.(v)'
+        y = h2 .+ prob.solution[4] * sin.(u)* sin.(v)'
+        z = h3 .+ prob.solution[4] * cos.(v)'
+        xs = h1 .+ cos.(u) * sin.(v)'
+        ys = h1 .+ sin.(u) * sin.(v)'
+        zs = h1 .+ ones(n) * cos.(v)'
+        plot!(plt, x, y, z, xs, ys, zs, st=:surface, camera=(-50,50))
+        display(plt)
+    end
+    if prob.name =="circle3d" || prob.name == "\tcircle3d"
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:,3], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
+        vn = [a[1], a[2], a[3]]
+        u = [-a[2], a[1],0.0]
+        v = [0.0, a[3], -a[2]]
+        u = u/norm(u)
+        h = v - (dot(v,u)/norm(u)^2)*u
+        v = h/norm(h)
+        θ = [0.0:2*π/360:2*π;]
+        x = a[4] .+ a[7]*(cos.(θ))*u[1] .+ a[7]*(sin.(θ))*v[1]
+        y = a[5] .+ a[7]*(cos.(θ))*u[2] .+ a[7]*(sin.(θ))*v[2]
+        z = a[6] .+ a[7]*(cos.(θ))*u[3] .+ a[7]*(sin.(θ))*v[3]
+        plot!(plt, x, y, z, camera=(10,50),  color=:red, lab = "solução do algoritmo") #usar camera=(100,40) pro nout=20
         display(plt)
     end
 end
