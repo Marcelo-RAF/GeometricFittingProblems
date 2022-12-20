@@ -433,14 +433,14 @@ function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-
     end
 end
 
-function visualize(prob, answer)
+function visualize(prob, a)
 
     plt = plot()
     if prob.name == "sphere2D" || prob.name == "\tsphere2D"
          plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
         θ = [0.0:2*π/360:2*π;]
-        xs = answer[1] .+ answer[3] * cos.(θ)
-        ys = answer[2] .+ answer[3] * sin.(θ)
+        xs = a[1] .+ a[3] * cos.(θ)
+        ys = a[2] .+ a[3] * sin.(θ)
         x = prob.solution[1] .+ prob.solution[3]* cos.(θ)
         y = prob.solution[2] .+ prob.solution[3]* sin.(θ)
         plot!(plt, xs, ys, color=:red, lab = "solução do algoritmo")
