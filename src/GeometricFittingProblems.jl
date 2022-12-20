@@ -465,10 +465,10 @@ function visualize(prob, a)
         x = h1 .+ prob.solution[4] * cos.(u)* sin.(v)'
         y = h2 .+ prob.solution[4] * sin.(u)* sin.(v)'
         z = h3 .+ prob.solution[4] * cos.(v)'
-        xs = h1 .+ cos.(u) * sin.(v)'
-        ys = h1 .+ sin.(u) * sin.(v)'
-        zs = h1 .+ ones(n) * cos.(v)'
-        plot!(plt, x, y, z, xs, ys, zs, st=:surface, camera=(-50,50))
+        #xs = h1 .+ cos.(u) * sin.(v)'
+        #ys = h1 .+ sin.(u) * sin.(v)'
+        #zs = h1 .+ ones(n) * cos.(v)'
+        plot!(plt, x, y, z, st=:surface, camera=(-50,50))
         display(plt)
     end
     if prob.name =="circle3d" || prob.name == "\tcircle3d"
