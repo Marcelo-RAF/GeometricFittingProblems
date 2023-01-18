@@ -52,55 +52,55 @@ function load_problem(filename::String)
     return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), eval(Meta.parse(prob_matrix[10, 2])))
 end
 
-function CGAHypersphere(data;ε = 1.0e-4) #algoritmo dorst esferas
-    (N,n) = size(data)
-    D = [data';ones(1,N)]
-    v = [0.5*norm(D[1:n,i] ,2)^2 for i=1:N ]
-    D = [D ; v']
+function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
+    (N, n) = size(data)
+    D = [data'; ones(1, N)]
+    v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
+    D = [D; v']
     #println("First D")
     #display(D)
     J = copy(D')
-    H = -copy(J[:,n+1])
-    J[:,n+1] = -J[:,n+2]
-    J[:,n+2] = H
+    H = -copy(J[:, n+1])
+    J[:, n+1] = -J[:, n+2]
+    J[:, n+2] = H
     #display(J)
 
-    DDt = D*D'
+    DDt = D * D'
     #println("Second D")
     #M = zeros(n+2,n+2)
     #for i=1:n
-       # M[i,i] = 1.0
+    # M[i,i] = 1.0
     #end
     #M[n+1,n+2] = -1.0
     #M[n+2,n+1] = -1.0
-    aux = -copy(DDt[:,n+1])
-    DDt[:,n+1] = -DDt[:,n+2]
-    DDt[:,n+2] = aux
+    aux = -copy(DDt[:, n+1])
+    DDt[:, n+1] = -DDt[:, n+2]
+    DDt[:, n+2] = aux
     #display(DDt)
-    p = (1.0/N)
-    P = p.*(DDt)
+    p = (1.0 / N)
+    P = p .* (DDt)
     F = eigen(P)
     indmin = 1
     valmin = F.values[1]
     for i = 2:n
-        if abs(valmin)>abs(F.values[i])
-            if F.values[i]>-ε   
+        if abs(valmin) > abs(F.values[i])
+            if F.values[i] > -ε
                 indmin = i
-                valmin = F.values[i] 
+                valmin = F.values[i]
             end
         end
     end
-    if valmin<-ε
+    if valmin < -ε
         error("P does not have postive eigen value!")
     end
-    xnorm = (1.0/(F.vectors[:,indmin][end-1]))*F.vectors[:,indmin]
+    xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
-    
+
     #u = 0.5*norm(xnorm[1:end-2])^2
     #y =[xnorm[1] xnorm[2] xnorm[3] u]
     #display(J*y')
 
-    return push!(center,√(norm(center,2)^2 -2.0*xnorm[end]))
+    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
 end
 
 function sort_sphere_res(P, x, nout)
@@ -194,7 +194,7 @@ function solve(prob::FitProbType, method::String, initθ=CGAHypersphere(prob.dat
         return CGAHypersphere(prob.data)
     end
     if method == "LOVO-CGA-Hypersphere"
-        LOVOCGAHypersphere(prob.data, prob.nout, initθ)
+        return LOVOCGAHypersphere(prob.data, prob.nout, initθ)
     end
 end
 
@@ -203,7 +203,7 @@ function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.da
         return CGAHypercircle(prob.data)
     end
     if method == "LOVO-CGA-Hypercircle"
-       return LOVOCGAHypercircle(prob.data, prob.nout, initθ)
+        return LOVOCGAHypercircle(prob.data, prob.nout, initθ)
     end
 end
 
@@ -215,9 +215,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         u = [params[5], params[6], params[7]]
         v = [params[8], params[9], params[10]]
         npts = Int(params[11])
-        u = u/norm(u)
-        h = v - (dot(v,u)/norm(u)^2)*u
-        v = h/norm(h)
+        u = u / norm(u)
+        h = v - (dot(v, u) / norm(u)^2) * u
+        v = h / norm(h)
         display(u)
         display(v)
         λ = [0:4/npts:1;]
@@ -229,16 +229,16 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         z = zeros(npts)
         for i = 1:Int(round(npts / 4))
-            w[:, i] = c + r * ((λ[i]*u +  (1-λ[i])* v) / (norm(λ[i]*u + (1-λ[i])* v)))
+            w[:, i] = c + r * ((λ[i] * u + (1 - λ[i]) * v) / (norm(λ[i] * u + (1 - λ[i]) * v)))
         end
         for i = (Int(round(npts / 4))+1):Int(round(npts / 2))
-           w[:, i] = c + r * ((λ[i-(Int(round(npts / 4)))]*(-u) + (1-λ[i-(Int(round(npts / 4)))])*v) / (norm(λ[i-(Int(round(npts / 4)))]*(-u) + (1-λ[i-(Int(round(npts / 4)))]) * v)))
+            w[:, i] = c + r * ((λ[i-(Int(round(npts / 4)))] * (-u) + (1 - λ[i-(Int(round(npts / 4)))]) * v) / (norm(λ[i-(Int(round(npts / 4)))] * (-u) + (1 - λ[i-(Int(round(npts / 4)))]) * v)))
         end
-        for i = (Int(round(npts / 2))+1):Int(round(3*npts / 4))
-            w[:, i] = c + r * ((λ[i-(Int(round(npts / 2)))]*u + (1-λ[i-(Int(round(npts / 2)))])*(-v)) / (norm(λ[i-(Int(round(npts / 2)))]*u + (1-λ[i-(Int(round(npts / 2)))])*(-v))))
+        for i = (Int(round(npts / 2))+1):Int(round(3 * npts / 4))
+            w[:, i] = c + r * ((λ[i-(Int(round(npts / 2)))] * u + (1 - λ[i-(Int(round(npts / 2)))]) * (-v)) / (norm(λ[i-(Int(round(npts / 2)))] * u + (1 - λ[i-(Int(round(npts / 2)))]) * (-v))))
         end
-        for i = (Int(round(3*npts / 4))+1):npts
-            w[:, i] = c + r * ((λ[i-(Int(round(3*npts / 4)))]*(-u) + (1-λ[i-(Int(round(3*npts / 4)))])*(-v)) / (norm((λ[i-(Int(round(3*npts / 4)))]*(-u) + (1-λ[i-(Int(round(3*npts / 4)))])*(-v)))))
+        for i = (Int(round(3 * npts / 4))+1):npts
+            w[:, i] = c + r * ((λ[i-(Int(round(3 * npts / 4)))] * (-u) + (1 - λ[i-(Int(round(3 * npts / 4)))]) * (-v)) / (norm((λ[i-(Int(round(3 * npts / 4)))] * (-u) + (1 - λ[i-(Int(round(3 * npts / 4)))]) * (-v)))))
         end
         nout = Int(params[12])
         k = 1
@@ -251,15 +251,15 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            w[:, iout[k]] = w[:, iout[k]] + [rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;]), rand([-(1+0.25)*r:0.1:(1+0.25)*r;])]
+            w[:, iout[k]] = w[:, iout[k]] + [rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])]
         end
         G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i] + G[1,i] 
-            y[i] = w[2, i] + G[2,i]
-            z[i] = w[3, i] + G[3,i] 
+            x[i] = w[1, i] + G[1, i]
+            y[i] = w[2, i] + G[2, i]
+            z[i] = w[3, i] + G[3, i]
         end
-        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[u,v]]]
+        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[u, v]]]
 
         open("circle3D_$(c[1])_$(c[2])_$(c[3])_$(r)_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -274,11 +274,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         #xr = randn(npts)
         #yr = randn(npts)
-        ruid = randn(2,npts)
+        ruid = randn(2, npts)
         θ = [0.0:2*π/(npts-1):2*π;]
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) + ruid[1,k]#xr[k]
-            y[k] = c[2] + r * sin(θ[k]) + ruid[2,k] #yr[k]
+            x[k] = c[1] + r * cos(θ[k]) + ruid[1, k]#xr[k]
+            y[k] = c[2] + r * sin(θ[k]) + ruid[2, k] #yr[k]
         end
         nout = Int(params[5])
         k = 1
@@ -291,8 +291,8 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
-            y[iout[k]] = y[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
         FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
 
@@ -311,11 +311,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         z = zeros(npts)
         θ = [0.0:2*π/(npts-1):2*π;]
         φ = [0.0:π/(npts-1):π;]
-        rd = randn(3,npts)
+        rd = randn(3, npts)
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1,k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2,k]
-            z[k] = c[3] + r * cos(φ[k]) + rd[3,k]
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -328,9 +328,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
-            y[iout[k]] = y[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
-            z[iout[k]] = z[iout[k]] + rand([-(1+0.25)*r:0.1:(1+0.25)*r;])
+            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
         FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
 
@@ -384,17 +384,17 @@ function CGAHypercircle(data; ε=1.0e-4)
     end
     P[1:3, 1:3] = -H2
     P[4:6, 1:3] = -H1
-    P[7:9, 1:3] = (1/2)*H4 #antes era só h1
-    P[1:3, 4:6] = -(1/2)*H4
-    P[4:6, 4:6] = H2 + (1/2)*H3*Id
-    P[7:9, 4:6] = (1/4)*H6*Id
-    P[10, 4:6] = (1/2)*H5
+    P[7:9, 1:3] = (1 / 2) * H4 #antes era só h1
+    P[1:3, 4:6] = -(1 / 2) * H4
+    P[4:6, 4:6] = H2 + (1 / 2) * H3 * Id
+    P[7:9, 4:6] = (1 / 4) * H6 * Id
+    P[10, 4:6] = (1 / 2) * H5
     P[1:3, 7:9] = H1
     P[4:6, 7:9] = SI
-    P[7:9, 7:9] = H2+(1/2)*H3*Id
+    P[7:9, 7:9] = H2 + (1 / 2) * H3 * Id
     P[10, 7:9] = H7
     P[4:6, 10] = -H7'
-    P[7:9, 10] = -(1/2)*H5'
+    P[7:9, 10] = -(1 / 2) * H5'
     P[10, 10] = -H3
     P = p .* (P)
     #display(P)
@@ -415,13 +415,13 @@ function CGAHypercircle(data; ε=1.0e-4)
     A = F.vectors[:, indmin]
     n1 = -A[4:6]
     d1, d2, d3 = n1[1], n1[2], n1[3]
-    C = [d1 d2 d3; 0 d3 -d2; -d3 0 d1; d2 -d1 0];
+    C = [d1 d2 d3; 0 d3 -d2; -d3 0 d1; d2 -d1 0]
     α = norm(A[4:6])
-    center = [A[10]; A[1:3]]'/-C'    #talvez tenha que alterar muito
-    n1 = n1/α
-    radius = (center*center' - 2*n1'*A[7:9]/α - 2*(n1'*center')^2)
-    
-    
+    center = [A[10]; A[1:3]]' / -C'    #talvez tenha que alterar muito
+    n1 = n1 / α
+    radius = (center * center' - 2 * n1' * A[7:9] / α - 2 * (n1' * center')^2)
+
+
     #α = norm(n1)
     #daqui pra baixo ta diferente
     #H = A/α
@@ -444,17 +444,17 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
-function sort_circle_res(P,x,nout)
+function sort_circle_res(P, x, nout)
     N = length(P[:, 1])
     M = length(P[1, :])
     v = zeros(N)
     a = zeros(N)
     #for i = 1:N
-     #       v[i] = (norm(P[i, :] - x[4:6])^2-x[7]^2)^2 + (dot(P[i,:]-x[4:6],x[1:3]))^2  
+    #       v[i] = (norm(P[i, :] - x[4:6])^2-x[7]^2)^2 + (dot(P[i,:]-x[4:6],x[1:3]))^2  
     #end
-    for i=1:N
-        a[i] = abs(dot(P[i,:]-x[4:6],x[1:3]))
-        for j=1:M
+    for i = 1:N
+        a[i] = abs(dot(P[i, :] - x[4:6], x[1:3]))
+        for j = 1:M
             v[i] = v[i] + (P[i, j] - x[3+j])^2 #corrigir aqui
         end
         v[i] = abs(v[i] - x[7]^2) + a[i]
@@ -476,15 +476,15 @@ function sort_circle_res(P,x,nout)
     return P[indtrust[1:N-nout], :], sum(v[1:N-nout])
 end
 
-function LOVOCGAHypercircle(data, nout, θ , ε=1.0e-12 )
-    ordres = sort_circle_res(data,θ,nout)
+function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-12)
+    ordres = sort_circle_res(data, θ, nout)
     k = 1
     antres = 0.0
-    while abs(ordres[2] - antres)> ε
+    while abs(ordres[2] - antres) > ε
         antres = ordres[2]
         θ = CGAHypercircle(ordres[1])
         ordres = sort_circle_res(data, θ, nout)
-        k = k+1
+        k = k + 1
     end
     display(k)
     return θ
@@ -513,29 +513,29 @@ function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-
 end
 
 function teste(prob)
-    plt=plot()
+    plt = plot()
     if prob.name == "sphere3D" || prob.name == "\tsphere3D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:,3], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
         n = 100
         h1 = zeros(n)
         h2 = zeros(n)
         h3 = zeros(n)
         h4 = zeros(n)
-        for i=1:n
+        for i = 1:n
             h1[i] = prob.solution[1]
             h2[i] = prob.solution[2]
             h3[i] = prob.solution[3]
             h4[i] = prob.solution[4]
-         end
-        u = range(-π, π; length = n)
-        v = range(0, π; length = n)
-        x = h1 .+ prob.solution[4] * cos.(u)* sin.(v)'
-        y = h2 .+ prob.solution[4] * sin.(u)* sin.(v)'
+        end
+        u = range(-π, π; length=n)
+        v = range(0, π; length=n)
+        x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
+        y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
         z = h3 .+ prob.solution[4] * cos.(v)'
         xs = h1 .+ cos.(u) * sin.(v)'
         ys = h1 .+ sin.(u) * sin.(v)'
         zs = h1 .+ ones(n) * cos.(v)'
-        plot!(plt, x, y, z, xs, ys, zs, st=:wireframe, camera=(-50,50))
+        plot!(plt, x, y, z, xs, ys, zs, st=:wireframe, camera=(-50, 50))
         display(plt)
     end
 end
@@ -545,60 +545,60 @@ end
 function visualize(prob, a)
     plt = plot()
     if prob.name == "sphere2D" || prob.name == "\tsphere2D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
         θ = [0.0:2*π/360:2*π;]
         xs = a[1] .+ a[3] * cos.(θ)
         ys = a[2] .+ a[3] * sin.(θ)
-        x = prob.solution[1] .+ prob.solution[3]* cos.(θ)
-        y = prob.solution[2] .+ prob.solution[3]* sin.(θ)
-        plot!(plt, xs, ys, color=:red, lab = "solução do algoritmo")
-        plot!(plt, x, y, color=:green, lab = "solução perfeita")
+        x = prob.solution[1] .+ prob.solution[3] * cos.(θ)
+        y = prob.solution[2] .+ prob.solution[3] * sin.(θ)
+        plot!(plt, xs, ys, color=:red, lab="solução do algoritmo")
+        plot!(plt, x, y, color=:green, lab="solução perfeita")
         display(plt)
     end
     if prob.name == "sphere3D" || prob.name == "\tsphere3D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:,3], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
         n = 100
         h1 = zeros(n)
         h2 = zeros(n)
         h3 = zeros(n)
         h4 = zeros(n)
-        for i=1:n
+        for i = 1:n
             h1[i] = prob.solution[1]
             h2[i] = prob.solution[2]
             h3[i] = prob.solution[3]
             h4[i] = prob.solution[4]
-         end
-        u = range(-π, π; length = n)
-        v = range(0, π; length = n)
-        x = h1 .+ prob.solution[4] * cos.(u)* sin.(v)'
-        y = h2 .+ prob.solution[4] * sin.(u)* sin.(v)'
+        end
+        u = range(-π, π; length=n)
+        v = range(0, π; length=n)
+        x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
+        y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
         z = h3 .+ prob.solution[4] * cos.(v)'
         #xs = h1 .+ cos.(u) * sin.(v)'
         #ys = h1 .+ sin.(u) * sin.(v)'
         #zs = h1 .+ ones(n) * cos.(v)'
-        plot!(plt, x, y, z, st=:surface, camera=(-50,50))
+        plot!(plt, x, y, z, st=:surface, camera=(-50, 50))
         display(plt)
     end
-    if prob.name =="circle3d" || prob.name == "\tcircle3d"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:,3], line=:scatter, aspect_ratio=:equal, lab = "pontos do problema")
+    if prob.name == "circle3d" || prob.name == "\tcircle3d"
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
         vn = [a[1], a[2], a[3]]
-        u = [-a[2], a[1],0.0]
+        u = [-a[2], a[1], 0.0]
         v = [0.0, a[3], -a[2]]
-        u = u/norm(u)
-        h = v - (dot(v,u)/norm(u)^2)*u
-        v = h/norm(h)
+        u = u / norm(u)
+        h = v - (dot(v, u) / norm(u)^2) * u
+        v = h / norm(h)
         uprob = prob.description[1]
         vprob = prob.description[2]
         sol = prob.solution
         θ = [0.0:2*π/360:2*π;]
-        xprob = sol[1] .+ sol[4]*(cos.(θ))*uprob[1] .+ sol[4]*(sin.(θ))*vprob[1]
-        yprob = sol[2] .+ sol[4]*(cos.(θ))*uprob[2] .+ sol[4]*(sin.(θ))*vprob[2]
-        zprob = sol[3] .+ sol[4]*(cos.(θ))*uprob[3] .+ sol[4]*(sin.(θ))*vprob[3]
-        x = a[4] .+ a[7]*(cos.(θ))*u[1] .+ a[7]*(sin.(θ))*v[1]
-        y = a[5] .+ a[7]*(cos.(θ))*u[2] .+ a[7]*(sin.(θ))*v[2]
-        z = a[6] .+ a[7]*(cos.(θ))*u[3] .+ a[7]*(sin.(θ))*v[3]
-        plot!(plt, xprob, yprob, zprob, camera=(20,50),  color=:green, lab = "solução perfeita")
-        plot!(plt, x, y, z, camera=(20,50),  color=:red, lab = "solução do algoritmo") #usar camera=(100,40) pro nout=20
+        xprob = sol[1] .+ sol[4] * (cos.(θ)) * uprob[1] .+ sol[4] * (sin.(θ)) * vprob[1]
+        yprob = sol[2] .+ sol[4] * (cos.(θ)) * uprob[2] .+ sol[4] * (sin.(θ)) * vprob[2]
+        zprob = sol[3] .+ sol[4] * (cos.(θ)) * uprob[3] .+ sol[4] * (sin.(θ)) * vprob[3]
+        x = a[4] .+ a[7] * (cos.(θ)) * u[1] .+ a[7] * (sin.(θ)) * v[1]
+        y = a[5] .+ a[7] * (cos.(θ)) * u[2] .+ a[7] * (sin.(θ)) * v[2]
+        z = a[6] .+ a[7] * (cos.(θ)) * u[3] .+ a[7] * (sin.(θ)) * v[3]
+        plot!(plt, xprob, yprob, zprob, camera=(20, 50), color=:green, lab="solução perfeita")
+        plot!(plt, x, y, z, camera=(20, 50), color=:red, lab="solução do algoritmo") #usar camera=(100,40) pro nout=20
         display(plt)
     end
 end
