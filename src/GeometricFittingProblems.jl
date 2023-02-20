@@ -1,6 +1,7 @@
 module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
+pyplot()
 
 export load_problem, solve, build_problem, inverse_power_method, solve2, visualize
 
@@ -51,6 +52,7 @@ function load_problem(filename::String)
     prob_matrix = readdlm(filename, ':')
     return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), eval(Meta.parse(prob_matrix[10, 2])))
 end
+
 
 function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
     (N, n) = size(data)
@@ -294,7 +296,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
-        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
+        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
         open("sphere2D_$(c[1])_$(c[2])_$(c[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -332,7 +334,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "none"]
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
         open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io #o que essa linha faz exatamente?
             writedlm(io, FileMatrix)
@@ -557,26 +559,31 @@ function visualize(prob, a)
     end
     if prob.name == "sphere3D" || prob.name == "\tsphere3D"
         plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
-        n = 100
+        n = 20
+        u = range(0, stop=2 * pi, length=n)
+        v = range(0, stop=pi, length=n)
         h1 = zeros(n)
         h2 = zeros(n)
         h3 = zeros(n)
         h4 = zeros(n)
+        h5 = zeros(n)
+        h6 = zeros(n)
         for i = 1:n
             h1[i] = prob.solution[1]
             h2[i] = prob.solution[2]
             h3[i] = prob.solution[3]
-            h4[i] = prob.solution[4]
+            h4[i] = c[1]
+            h5[i] = c[2]
+            h6[i] = c[3]
         end
-        u = range(-π, π; length=n)
-        v = range(0, π; length=n)
         x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
         y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
         z = h3 .+ prob.solution[4] * cos.(v)'
-        #xs = h1 .+ cos.(u) * sin.(v)'
-        #ys = h1 .+ sin.(u) * sin.(v)'
-        #zs = h1 .+ ones(n) * cos.(v)'
-        plot!(plt, x, y, z, st=:surface, camera=(-50, 50))
+        xs = h4 .+ c[4] * cos.(u) * sin.(v)'
+        ys = h5 .+ c[4] * sin.(u) * sin.(v)'
+        zs = h6 .+ c[4] * cos.(v)'
+        wireframe!(xs, ys, zs, aspect_ratio=:equal, lab="solução do algoritmo")
+        wireframe!(x, y, z, aspect_ratio=:equal, color=:red, lab="solução perfeita")
         display(plt)
     end
     if prob.name == "circle3d" || prob.name == "\tcircle3d"
