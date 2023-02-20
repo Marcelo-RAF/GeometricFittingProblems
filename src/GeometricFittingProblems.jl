@@ -1,7 +1,7 @@
 module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
-pyplot()
+pyplot() #beckendpyplot
 
 export load_problem, solve, build_problem, inverse_power_method, solve2, visualize
 
