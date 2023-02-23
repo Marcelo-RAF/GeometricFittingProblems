@@ -1,7 +1,6 @@
 module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
-pyplot() #beckendpyplot
 
 export load_problem, solve, build_problem, inverse_power_method, solve2, visualize
 
@@ -545,6 +544,7 @@ end
 
 
 function visualize(prob, a)
+    pyplot() #beckendpyplot
     plt = plot()
     if prob.name == "sphere2D" || prob.name == "\tsphere2D"
         plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
@@ -558,7 +558,8 @@ function visualize(prob, a)
         display(plt)
     end
     if prob.name == "sphere3D" || prob.name == "\tsphere3D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
+        plt = plot()
+        plot!(prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, label="pontos do problema")
         n = 20
         u = range(0, stop=2 * pi, length=n)
         v = range(0, stop=pi, length=n)
@@ -582,9 +583,9 @@ function visualize(prob, a)
         xs = h4 .+ a[4] * cos.(u) * sin.(v)'
         ys = h5 .+ a[4] * sin.(u) * sin.(v)'
         zs = h6 .+ a[4] * cos.(v)'
-        wireframe!(xs, ys, zs, aspect_ratio=:equal, lab="solução do algoritmo")
-        wireframe!(x, y, z, aspect_ratio=:equal, color=:red, lab="solução perfeita")
-        display(plt)
+        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:green,label="solução do algoritmo")
+        wireframe!(x, y, z, aspect_ratio=:equal, color=:red, label="solução perfeita")
+       return plt 
     end
     if prob.name == "circle3d" || prob.name == "\tcircle3d"
         plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
