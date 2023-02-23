@@ -572,16 +572,16 @@ function visualize(prob, a)
             h1[i] = prob.solution[1]
             h2[i] = prob.solution[2]
             h3[i] = prob.solution[3]
-            h4[i] = c[1]
-            h5[i] = c[2]
-            h6[i] = c[3]
+            h4[i] = a[1]
+            h5[i] = a[2]
+            h6[i] = a[3]
         end
         x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
         y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
         z = h3 .+ prob.solution[4] * cos.(v)'
-        xs = h4 .+ c[4] * cos.(u) * sin.(v)'
-        ys = h5 .+ c[4] * sin.(u) * sin.(v)'
-        zs = h6 .+ c[4] * cos.(v)'
+        xs = h4 .+ a[4] * cos.(u) * sin.(v)'
+        ys = h5 .+ a[4] * sin.(u) * sin.(v)'
+        zs = h6 .+ a[4] * cos.(v)'
         wireframe!(xs, ys, zs, aspect_ratio=:equal, lab="solução do algoritmo")
         wireframe!(x, y, z, aspect_ratio=:equal, color=:red, lab="solução perfeita")
         display(plt)
