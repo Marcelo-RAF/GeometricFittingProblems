@@ -2,7 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
 
-export load_problem, solve, build_problem, inverse_power_method, solve2, visualize
+export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT
 
 import Base.show
 
@@ -132,6 +132,24 @@ function sort_sphere_res(P, x, nout)
     return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
 end
 
+
+function LMSORT(data, nout, θ, ε=1.0e-8)
+    ordres = sort_sphere_res(data, θ, nout)
+    k = 1.0
+    antres = 0.0
+    while abs(ordres[2] - antres) > ε
+        display(ordres[2])
+        antres = ordres[2]
+        θ = LMsphere(ordres[1], θ)
+        println(θ)
+        ordres = sort_sphere_res(data, θ, nout)
+        k = k + 1
+    end
+    display(k)
+end
+
+
+
 function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-8)
 
     ordres = sort_sphere_res(data, θ, nout)
@@ -145,7 +163,7 @@ function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-8)
         ordres = sort_sphere_res(data, θ, nout)
         k = k + 1
     end
-    #   display(k)
+    display(k)
     return θ
 
 end
@@ -190,7 +208,15 @@ julia> solve(prob,"LOVO-CGA-Hypersphere",rand(3))
 ```
 
 """
+
+
 function solve(prob::FitProbType, method::String, initθ=CGAHypersphere(prob.data))
+    if method == "LMsphere"
+        return LMsphere(prob.data, initθ)
+    end
+    if method == "LMSORT"
+        return LMSORT(prob.data, prob.nout, initθ)
+    end
     if method == "CGA-Hypersphere"
         return CGAHypersphere(prob.data)
     end
@@ -198,6 +224,8 @@ function solve(prob::FitProbType, method::String, initθ=CGAHypersphere(prob.dat
         return LOVOCGAHypersphere(prob.data, prob.nout, initθ)
     end
 end
+
+
 
 function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.data))
     if method == "CGA-Hypercircle"
@@ -275,11 +303,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         #xr = randn(npts)
         #yr = randn(npts)
-        ruid = randn(2, npts)
+        #ruid = randn(2, npts)
         θ = [0.0:2*π/(npts-1):2*π;]
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) + ruid[1, k]#xr[k]
-            y[k] = c[2] + r * sin(θ[k]) + ruid[2, k] #yr[k]
+            x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]#xr[k]
+            y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k] #yr[k]
         end
         nout = Int(params[5])
         k = 1
@@ -314,9 +342,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         φ = [0.0:π/(npts-1):π;]
         rd = randn(3, npts)
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -358,6 +386,63 @@ julia> inverse_power_method(A,[1.0,1.0,1.0])
 returns ???
 ```
 """
+
+function fsphere(xinit, data)
+    h = data
+    (m, n) = size(data)
+    r = zeros(m)
+    for i = 1:m
+        for j = 1:n
+            r[i] = (h[i, j] - xinit[j])^2 + r[i]
+        end
+        r[i] = r[i] - xinit[end]^2
+    end
+    return r
+end
+
+function jsphere(xinit, data)
+    h = data
+    (m, n) = size(data)
+    J = zeros(m, n + 1)
+    for i = 1:m
+        for j = 1:n
+            J[i, j] = -2 * (h[i, j] - xinit[j])
+        end
+        J[i, end] = -2 * xinit[end]
+    end
+    return J
+end
+
+
+function LMsphere(data, x0, ε=1.0e-10)
+    k = 0
+    x = x0
+    R = fsphere(x, data)
+    J = jsphere(x, data)
+    (m, n) = size(J)
+    xn = zeros(length(x))
+    Id = Matrix{Float64}(I, n, n)
+    λ = norm((J') * R, 2) / (norm(R, 2)^2)
+    k1 = 2
+    k2 = 1.5
+    while norm((J') * R) > ε && k < 100
+        d = (J' * J + λ * Id) \ ((-J') * R)
+        xn = x + d
+        if 0.5 * norm(fsphere(xn, data), 2)^2 < 0.5 * norm(fsphere(x, data), 2)^2
+            x = xn
+            λ = λ / k1
+            R = fsphere(x, data)
+            J = jsphere(x, data)
+        else
+            λ = λ * k2
+        end
+        k = k + 1
+    end
+
+    return x
+end
+
+
 function CGAHypercircle(data; ε=1.0e-4)
     (N, n) = size(data)
     p = (1.0 / N)
@@ -513,33 +598,6 @@ function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-
     end
 end
 
-function teste(prob)
-    plt = plot()
-    if prob.name == "sphere3D" || prob.name == "\tsphere3D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
-        n = 100
-        h1 = zeros(n)
-        h2 = zeros(n)
-        h3 = zeros(n)
-        h4 = zeros(n)
-        for i = 1:n
-            h1[i] = prob.solution[1]
-            h2[i] = prob.solution[2]
-            h3[i] = prob.solution[3]
-            h4[i] = prob.solution[4]
-        end
-        u = range(-π, π; length=n)
-        v = range(0, π; length=n)
-        x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
-        y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
-        z = h3 .+ prob.solution[4] * cos.(v)'
-        xs = h1 .+ cos.(u) * sin.(v)'
-        ys = h1 .+ sin.(u) * sin.(v)'
-        zs = h1 .+ ones(n) * cos.(v)'
-        plot!(plt, x, y, z, xs, ys, zs, st=:wireframe, camera=(-50, 50))
-        display(plt)
-    end
-end
 
 
 
@@ -583,9 +641,9 @@ function visualize(prob, a)
         xs = h4 .+ a[4] * cos.(u) * sin.(v)'
         ys = h5 .+ a[4] * sin.(u) * sin.(v)'
         zs = h6 .+ a[4] * cos.(v)'
-        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:green,label="solução do algoritmo")
+        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:green, label="solução do algoritmo")
         wireframe!(x, y, z, aspect_ratio=:equal, color=:red, label="solução perfeita")
-       return plt 
+        return plt
     end
     if prob.name == "circle3d" || prob.name == "\tcircle3d"
         plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
