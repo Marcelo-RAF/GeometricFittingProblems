@@ -1,8 +1,8 @@
 module GeometricFittingProblems
 
-using DelimitedFiles, LinearAlgebra, Plots
+using DelimitedFiles, LinearAlgebra, Plots, BenchmarkTools, CSV, DataFrames
 
-export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT
+export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT, teste_sphere_3D, geradoraut
 
 import Base.show
 
@@ -138,34 +138,29 @@ function LMSORT(data, nout, θ, ε=1.0e-8)
     k = 1.0
     antres = 0.0
     while abs(ordres[2] - antres) > ε
-        display(ordres[2])
         antres = ordres[2]
         θ = LMsphere(ordres[1], θ)
-        println(θ)
         ordres = sort_sphere_res(data, θ, nout)
         k = k + 1
     end
-    display(k)
+    return θ, k
 end
 
 
 
 function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-8)
-
     ordres = sort_sphere_res(data, θ, nout)
     k = 1
     antres = 0.0
     while abs(ordres[2] - antres) > ε
-        display(ordres[2])
+        #display(ordres[2])
         antres = ordres[2]
         θ = CGAHypersphere(ordres[1])
-        println(θ)
+        #println(θ)
         ordres = sort_sphere_res(data, θ, nout)
         k = k + 1
     end
-    display(k)
-    return θ
-
+    return θ, k
 end
 
 
@@ -304,7 +299,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         #xr = randn(npts)
         #yr = randn(npts)
         #ruid = randn(2, npts)
-        θ = [0.0:2*π/(npts-1):2*π;]
+        θ = range(0, stop=2π, length=npts)
         for k = 1:npts
             x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]#xr[k]
             y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k] #yr[k]
@@ -338,9 +333,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
-        θ = [0.0:2*π/(npts-1):2*π;]
-        φ = [0.0:π/(npts-1):π;]
-        rd = randn(3, npts)
+        θ = range(0, stop=2π, length=npts)
+        φ = range(0, stop=π, length=npts)
+        # rd = randn(3, npts)
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
             x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
             y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
@@ -598,7 +593,20 @@ function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-
     end
 end
 
-
+function geradoraut(h)
+    n = 1000  # tamanho da lista desejada
+    a = -60  # limite inferior do intervalo
+    b = 60  # limite superior do intervalo
+    c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
+    c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
+    c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
+    r = float(rand(5:200, 1000))
+    npts = float(rand(3000:6000, 300))
+    nout = float([floor(Int, h * x) for x in npts])
+    for i = 1:50
+        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], npts[i], nout[i]])
+    end
+end
 
 
 function visualize(prob, a)
@@ -671,6 +679,45 @@ end
 
 
 
+function teste_sphere_3D(file::String, method::String, pinit=[0, 0, 0, 1.0])
+    set_problem = String.(readdlm(file))
+    csv_file = open("solucoescga40.csv", "w")
+    csv_file_benchmark = open("benchresultscga40.csv", "w")
+    df = DataFrame()
+    k = 0
+    benchmark_df = DataFrame()
+    for probname ∈ set_problem
+        log_file = open("logcga40.txt", "w")
+        prob = load_problem(probname)
+        solved = false
+        try
+            s = solve(prob, method, pinit)
+            a = @benchmark solve($prob, $method, $pinit)
+            k = k + 1
+            println(k)
+            row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
+            df = vcat(df, row)
+            benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+            benchmark_df = vcat(benchmark_df, benchmark_row)
+            #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+            CSV.write(csv_file, df)
+            CSV.write(csv_file_benchmark, benchmark_df)
+        catch e
+            println("erro: ", e)
+            solved = false
+            write(log_file, "$probname\n")
+        end
+        close(log_file)
+    end
+    close(csv_file)
+    close(csv_file_benchmark)
+end
+
+
+
+
+
+
 function show(io::IO, fout::FitOutputType)
 
     print(io, "  ▶ Output ◀ \n")
@@ -684,6 +731,9 @@ function show(io::IO, fout::FitOutputType)
     print(io, "  ↳ Minimum (.minimum) = $(fout.minimum) \n")
     print(io, "  ↳ Number of function calls (.feval) = $(fout.feval) \n")
 end
+
+
+
 
 
 end # module
