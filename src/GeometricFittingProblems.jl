@@ -135,8 +135,8 @@ end
 
 function LMSORT(data, nout, θ, ε=1.0e-8)
     ordres = sort_sphere_res(data, θ, nout)
-    k = 1.0
     antres = 0.0
+    k = 1
     while abs(ordres[2] - antres) > ε
         antres = ordres[2]
         θ = LMsphere(ordres[1], θ)
@@ -148,15 +148,13 @@ end
 
 
 
-function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-8)
+function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-12)
     ordres = sort_sphere_res(data, θ, nout)
     k = 1
     antres = 0.0
     while abs(ordres[2] - antres) > ε
-        #display(ordres[2])
         antres = ordres[2]
         θ = CGAHypersphere(ordres[1])
-        #println(θ)
         ordres = sort_sphere_res(data, θ, nout)
         k = k + 1
     end
@@ -410,7 +408,7 @@ end
 
 
 function LMsphere(data, x0, ε=1.0e-10)
-    k = 0
+    k = 1
     x = x0
     R = fsphere(x, data)
     J = jsphere(x, data)
@@ -433,7 +431,6 @@ function LMsphere(data, x0, ε=1.0e-10)
         end
         k = k + 1
     end
-
     return x
 end
 
@@ -595,16 +592,16 @@ end
 
 function geradoraut(h)
     n = 1000  # tamanho da lista desejada
-    a = -60  # limite inferior do intervalo
-    b = 60  # limite superior do intervalo
+    a = -100  # limite inferior do intervalo
+    b = 100  # limite superior do intervalo
     c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     r = float(rand(5:200, 1000))
-    npts = float(rand(3000:6000, 300))
+    npts = float(rand(20:6000, 300))
     nout = float([floor(Int, h * x) for x in npts])
-    for i = 1:50
-        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], npts[i], nout[i]])
+    for i = 1:100
+        build_problem("sphere2D", [1.0, 1.0], [c1[i], c2[i], r[i], npts[i], nout[i]])
     end
 end
 
@@ -681,18 +678,18 @@ end
 
 function teste_sphere_3D(file::String, method::String, pinit=[0, 0, 0, 1.0])
     set_problem = String.(readdlm(file))
-    csv_file = open("solucoescga40.csv", "w")
-    csv_file_benchmark = open("benchresultscga40.csv", "w")
+    csv_file = open("solcga3d_30.csv", "w")
+    csv_file_benchmark = open("benchcga3d_40.csv", "w")
     df = DataFrame()
     k = 0
     benchmark_df = DataFrame()
     for probname ∈ set_problem
-        log_file = open("logcga40.txt", "w")
+        log_file = open("logcga3d_40.txt", "w")
         prob = load_problem(probname)
         solved = false
         try
             s = solve(prob, method, pinit)
-            a = @benchmark solve($prob, $method, $pinit)
+            a = @benchmark solve($prob, $method, $pinit) samples = 5000
             k = k + 1
             println(k)
             row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
@@ -713,7 +710,39 @@ function teste_sphere_3D(file::String, method::String, pinit=[0, 0, 0, 1.0])
     close(csv_file_benchmark)
 end
 
-
+function testeLM(file::String, method::String, pinit=[[0, 0, 0.0, 1.0], 0.0])
+    set_problem = String.(readdlm(file))
+    csv_file = open("sollm3_40.csv", "w")
+    csv_file_benchmark = open("benchlm3_40.csv", "w")
+    df = DataFrame()
+    k = 0
+    benchmark_df = DataFrame()
+    for probname ∈ set_problem
+        log_file = open("loglm4.txt", "w")
+        prob = load_problem(probname)
+        solved = false
+        try
+            s = solve(prob, method, pinit)
+            a = @benchmark solve($prob, $method, $pinit) samples = 5000
+            k = k + 1
+            println(k)
+            row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3])])
+            df = vcat(df, row)
+            benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+            benchmark_df = vcat(benchmark_df, benchmark_row)
+            #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+            CSV.write(csv_file, df)
+            CSV.write(csv_file_benchmark, benchmark_df)
+        catch e
+            println("erro: ", e)
+            solved = false
+            write(log_file, "$probname\n")
+        end
+        close(log_file)
+    end
+    close(csv_file)
+    close(csv_file_benchmark)
+end
 
 
 
