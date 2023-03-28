@@ -2,6 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots, BenchmarkTools, CSV, DataFrames
 
+
 export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT, teste_sphere_3D, geradoraut
 
 import Base.show
@@ -33,6 +34,8 @@ struct FitOutputType
     minimum::Float64
     feval::Int
 end
+
+
 
 """
     load_problem(filename::String)
@@ -148,7 +151,7 @@ end
 
 
 
-function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-12)
+function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-6)
     ordres = sort_sphere_res(data, θ, nout)
     k = 1
     antres = 0.0
@@ -240,10 +243,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         u = u / norm(u)
         h = v - (dot(v, u) / norm(u)^2) * u
         v = h / norm(h)
-        display(u)
-        display(v)
         λ = [0:4/npts:1;]
-        println(λ)
         w = zeros(Int(3.0), npts)
         #h = zeros(Int(3.0), npts)
         nn = zeros(npts)
@@ -312,9 +312,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
+        #dx = randn() * 0.1 * r # deslocamento aleatório em x
+        #dy = randn() * 0.1 * r # deslocamento aleatório em y
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
-            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            dx = (rand() - 0.5) * 2 * r * 0.15
+            dy = (rand() - 0.5) * 2 * r * 0.15
+            x[iout[k]] += dx #x[iout[k]] + dx #rand([-(0.1)*r:0.1:(0.10)*r;])
+            y[iout[k]] += dy #y[iout[k]] + dy #rand([-(0.1)*r:0.1:(0.10)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
         FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
@@ -349,10 +353,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
+        dx = randn() * 0.1 * r
+        dy = randn() * 0.1 * r
+        dz = randn() * 0.1 * r
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
-            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
-            z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            x[iout[k]] = x[iout[k]] + dx#+ rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            y[iout[k]] = y[iout[k]] + dy#+ rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            z[iout[k]] = z[iout[k]] + dz#+ rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
         FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
@@ -407,7 +414,40 @@ function jsphere(xinit, data)
 end
 
 
-function LMsphere(data, x0, ε=1.0e-10)
+function LMClass(prob, xk, ε=1.0e-5, MAXIT=100)
+    newdata = sort_sphere_res(prob.data, xk, prob.nout)
+    R = fsphere(xk, newdata[1])
+    J = jsphere(xk, newdata[1])
+    (m,n) = size(J)
+    Id = Matrix{Float64}(I, n, n)
+    k = 1
+    λ_up = 2.0
+    λ_down = 2.0
+    λ = 1.0
+    μ = 0.7
+    dk = 0.0
+    while norm(J'*R,2) > ε && k<MAXIT
+        dk = (J' * J + λ * Id) \ ((-J') * R)
+        md = 0.5*(norm((R+J*dk),2))^2 + λ*norm(dk,2)^2 
+        Rd = fsphere(xk+dk, newdata[1])
+        ρk = (0.5*norm(R,2)^2 - 0.5*norm(Rd,2)^2)/(0.5*norm(R,2)^2 - md)
+        if ρk < μ
+            λ = λ*λ_up
+        else
+            λ = λ / λ_down
+            xk = xk + dk
+            newdata = sort_sphere_res(prob.data, xk, prob.nout)
+            R = fsphere(xk, newdata[1])
+            J = jsphere(xk, newdata[1])
+            k = k+1
+        end
+    end
+    return xk, k
+end
+
+
+
+function LMsphere(data, x0, ε=1.0e-10, λ_min=1e-4)
     k = 1
     x = x0
     R = fsphere(x, data)
@@ -418,12 +458,16 @@ function LMsphere(data, x0, ε=1.0e-10)
     λ = norm((J') * R, 2) / (norm(R, 2)^2)
     k1 = 2
     k2 = 1.5
-    while norm((J') * R) > ε && k < 100
+    while norm((J') * R) > ε && k < 1000
         d = (J' * J + λ * Id) \ ((-J') * R)
         xn = x + d
         if 0.5 * norm(fsphere(xn, data), 2)^2 < 0.5 * norm(fsphere(x, data), 2)^2
             x = xn
+            if λ<λ_min
+                λ = λ_min
+            else
             λ = λ / k1
+            end
             R = fsphere(x, data)
             J = jsphere(x, data)
         else
@@ -597,11 +641,11 @@ function geradoraut(h)
     c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    r = float(rand(5:200, 1000))
-    npts = float(rand(20:6000, 300))
+    r = float(rand(5:150, 1000))
+    npts = float(rand(30:3000, 300))
     nout = float([floor(Int, h * x) for x in npts])
-    for i = 1:100
-        build_problem("sphere2D", [1.0, 1.0], [c1[i], c2[i], r[i], npts[i], nout[i]])
+    for i = 1:200
+        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], npts[i], nout[i]])
     end
 end
 
@@ -676,34 +720,68 @@ end
 
 
 
-function teste_sphere_3D(file::String, method::String, pinit=[0, 0, 0, 1.0])
+function teste_sphere_3D(file::String, method::String) #pinit=[0.0, 0.0,0.0, 1.0])
     set_problem = String.(readdlm(file))
-    csv_file = open("solcga3d_30.csv", "w")
-    csv_file_benchmark = open("benchcga3d_40.csv", "w")
+    csv_file = open("teste3DCGA_50.csv", "w")
+    #csv_file_benchmark = open("benchCGA3d_30.csv", "w")
     df = DataFrame()
     k = 0
-    benchmark_df = DataFrame()
+    #benchmark_df = DataFrame()
     for probname ∈ set_problem
-        log_file = open("logcga3d_40.txt", "w")
+        #log_file = open("logCGA3d_30.txt", "w")
         prob = load_problem(probname)
+        pinit = CGAHypersphere(prob.data)
+        #x0 = LMsphere(prob.data, pinit)
         solved = false
         try
             s = solve(prob, method, pinit)
-            a = @benchmark solve($prob, $method, $pinit) samples = 5000
+            #a = @benchmark solve($prob, $method, $pinit) samples = 5000 #usa
             k = k + 1
             println(k)
             row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
             df = vcat(df, row)
-            benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
-            benchmark_df = vcat(benchmark_df, benchmark_row)
-            #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+            #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
+            #benchmark_df = vcat(benchmark_df, benchmark_row) #usa
             CSV.write(csv_file, df)
-            CSV.write(csv_file_benchmark, benchmark_df)
+            #CSV.write(csv_file_benchmark, benchmark_df)
+        catch e
+            println("erro: ", e)
+            solved = false
+            #write(log_file, "$probname\n")
+        end
+        #close(log_file)
+    end
+    close(csv_file)
+    #close(csv_file_benchmark)
+end
+
+function testeclass(file::String, pinit=[0.0, 0.0, 0.0, 1.0])
+    set_problem = String.(readdlm(file))
+    csv_file = open("resultsclassicLM3d30.csv","w")
+    csv_file_benchmark = open("benchLMClass3d_30.csv", "w")
+    df = DataFrame()
+    benchmark_df = DataFrame()
+    k = 0 
+    for probname ∈ set_problem
+        log_file = open("logLM3d_30.txt", "w")
+        prob = load_problem(probname)
+        solved = false
+        try
+           s = LMClass(prob,pinit)
+           a = @benchmark LMClass($prob,$pinit) samples = 5000
+           k = k+1
+           println(k)
+           row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
+           df = vcat(df, row)
+           benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
+           benchmark_df = vcat(benchmark_df, benchmark_row) #usa
+           CSV.write(csv_file, df)
+           CSV.write(csv_file_benchmark, benchmark_df)
         catch e
             println("erro: ", e)
             solved = false
             write(log_file, "$probname\n")
-        end
+        end 
         close(log_file)
     end
     close(csv_file)
