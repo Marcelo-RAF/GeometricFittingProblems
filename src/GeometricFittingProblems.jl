@@ -1,6 +1,6 @@
 module GeometricFittingProblems
 
-using DelimitedFiles, LinearAlgebra, Plots, BenchmarkTools, CSV, DataFrames
+using DelimitedFiles, LinearAlgebra, Plots
 
 
 export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT, teste_sphere_3D, geradoraut
@@ -24,7 +24,11 @@ struct FitProbType
     cluster::Bool
     noise::Bool
     solution::Array{Float64,1}
-    description::Vector{Vector{Any}}
+    description:: String
+    sandbox :: Vector{Vector{Any}}
+    function FitProbType(_name,_data,_npts,_nout,_model,_dim,_cluster,_noise,_solution,_description)
+        new(_name,_data,_npts,_nout,_model,_dim,_cluster,_noise,_solution,_description,[["NONE"]])
+    end
 end
 
 struct FitOutputType
@@ -52,7 +56,14 @@ returns a FitProbType
 """
 function load_problem(filename::String)
     prob_matrix = readdlm(filename, ':')
-    return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), eval(Meta.parse(prob_matrix[10, 2])))
+    (m,n) = size(prob_matrix)
+    if m==10 
+        return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), prob_matrix[10, 2])
+    elseif m==11 
+        return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), prob_matrix[10, 2],eval(Meta.parse(prob_matrix[11,2])))
+    else 
+        error("No type identified!!")
+    end
 end
 
 
@@ -719,108 +730,6 @@ function visualize(prob, a)
 end
 
 
-
-function teste_sphere_3D(file::String, method::String) #pinit=[0.0, 0.0,0.0, 1.0])
-    set_problem = String.(readdlm(file))
-    csv_file = open("teste3DCGA_50.csv", "w")
-    #csv_file_benchmark = open("benchCGA3d_30.csv", "w")
-    df = DataFrame()
-    k = 0
-    #benchmark_df = DataFrame()
-    for probname ∈ set_problem
-        #log_file = open("logCGA3d_30.txt", "w")
-        prob = load_problem(probname)
-        pinit = CGAHypersphere(prob.data)
-        #x0 = LMsphere(prob.data, pinit)
-        solved = false
-        try
-            s = solve(prob, method, pinit)
-            #a = @benchmark solve($prob, $method, $pinit) samples = 5000 #usa
-            k = k + 1
-            println(k)
-            row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
-            df = vcat(df, row)
-            #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
-            #benchmark_df = vcat(benchmark_df, benchmark_row) #usa
-            CSV.write(csv_file, df)
-            #CSV.write(csv_file_benchmark, benchmark_df)
-        catch e
-            println("erro: ", e)
-            solved = false
-            #write(log_file, "$probname\n")
-        end
-        #close(log_file)
-    end
-    close(csv_file)
-    #close(csv_file_benchmark)
-end
-
-function testeclass(file::String, pinit=[0.0, 0.0, 0.0, 1.0])
-    set_problem = String.(readdlm(file))
-    csv_file = open("resultsclassicLM3d30.csv","w")
-    csv_file_benchmark = open("benchLMClass3d_30.csv", "w")
-    df = DataFrame()
-    benchmark_df = DataFrame()
-    k = 0 
-    for probname ∈ set_problem
-        log_file = open("logLM3d_30.txt", "w")
-        prob = load_problem(probname)
-        solved = false
-        try
-           s = LMClass(prob,pinit)
-           a = @benchmark LMClass($prob,$pinit) samples = 5000
-           k = k+1
-           println(k)
-           row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
-           df = vcat(df, row)
-           benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
-           benchmark_df = vcat(benchmark_df, benchmark_row) #usa
-           CSV.write(csv_file, df)
-           CSV.write(csv_file_benchmark, benchmark_df)
-        catch e
-            println("erro: ", e)
-            solved = false
-            write(log_file, "$probname\n")
-        end 
-        close(log_file)
-    end
-    close(csv_file)
-    close(csv_file_benchmark)
-end
-
-function testeLM(file::String, method::String, pinit=[[0, 0, 0.0, 1.0], 0.0])
-    set_problem = String.(readdlm(file))
-    csv_file = open("sollm3_40.csv", "w")
-    csv_file_benchmark = open("benchlm3_40.csv", "w")
-    df = DataFrame()
-    k = 0
-    benchmark_df = DataFrame()
-    for probname ∈ set_problem
-        log_file = open("loglm4.txt", "w")
-        prob = load_problem(probname)
-        solved = false
-        try
-            s = solve(prob, method, pinit)
-            a = @benchmark solve($prob, $method, $pinit) samples = 5000
-            k = k + 1
-            println(k)
-            row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3])])
-            df = vcat(df, row)
-            benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
-            benchmark_df = vcat(benchmark_df, benchmark_row)
-            #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
-            CSV.write(csv_file, df)
-            CSV.write(csv_file_benchmark, benchmark_df)
-        catch e
-            println("erro: ", e)
-            solved = false
-            write(log_file, "$probname\n")
-        end
-        close(log_file)
-    end
-    close(csv_file)
-    close(csv_file_benchmark)
-end
 
 
 
