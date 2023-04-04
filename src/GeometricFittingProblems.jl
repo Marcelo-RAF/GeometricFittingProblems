@@ -2,8 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
 
-
-export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT, teste_sphere_3D, geradoraut
+export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT, geradoraut
 
 import Base.show
 
@@ -146,6 +145,19 @@ function sort_sphere_res(P, x, nout)
     return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
 end
 
+function LMCIRCLEsq(data, nout, θ, ε=1.0e-8)
+    ordres = sort_circle_res(data, θ, nout)
+    antres = 0.0
+    k = 1
+    while abs(ordres[2] - antres) > ε
+        antres = ordres[2]
+        θ = LMcircle(ordres[1], θ)
+        ordres = sort_circle_res(data, θ, nout)
+        k = k + 1
+    end
+    return θ, k
+end
+
 
 function LMSORT(data, nout, θ, ε=1.0e-8)
     ordres = sort_sphere_res(data, θ, nout)
@@ -244,6 +256,48 @@ function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.da
 end
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
+    if probtype =="plane"
+        println("params need to be setup as [center,radious,npts,nout]")
+        p0 = [params[1], params[2], params[3]]
+        u = [params[4], params[5], params[6]]
+        v = [params[7], params[8], params[9]]
+        u = u / norm(u)
+        h = v - (dot(v, u) / norm(u)^2) * u
+        v = h / norm(h)
+        npts = Int(params[10])
+        λ = range(0, stop = 66, length=npts)
+        μ = range(-83, stop = 20, length=npts)
+        x = zeros(npts)
+        y = zeros(npts)
+        z = zeros(npts)
+        vn = cross(u,v)
+        for i=1:npts
+            x[i] = p0[1] + λ[i]*u[1] + μ[i]*v[1]
+            y[i] = p0[2] + λ[i]*u[2] + μ[i]*v[2]
+            z[i] = p0[3] + λ[i]*u[3] + μ[i]*v[3]
+        end
+        nout = Int(params[11])
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        r = 3.0
+        for k = 1:nout
+            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]) 
+            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+        end
+        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
+
+        open("plane_$(vn[1])_$(vn[2])_$(vn[3])_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+    end
     if probtype == "circle3d"
         println("params need to be setup as [center,radious,npts,nout]")
         c = [params[1], params[2], params[3]]
@@ -305,13 +359,21 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         npts = Int(params[4])
         x = zeros(npts)
         y = zeros(npts)
-        #xr = randn(npts)
-        #yr = randn(npts)
+        xr = randn(npts)
+        yr = randn(npts)
         #ruid = randn(2, npts)
-        θ = range(0, stop=2π, length=npts)
+        #if isinteger(0.75*npts)==false
+        #    l = Int(round(0.75*npts))
+        #   h = Int(ceil(0.75*npts))
+        #else
+        #    l = Int(0.75*npts) -1
+        #    h = Int(0.75*npts)
+        #end
+        θ = range(0, stop =2*π, length=npts)#Int(ceil(npts/2)))
+        #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]#xr[k]
-            y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k] #yr[k]
+            x[k] = c[1] + r * cos(θ[k]) + xr[k]
+            y[k] = c[2] + r * sin(θ[k]) + yr[k]
         end
         nout = Int(params[5])
         k = 1
@@ -323,15 +385,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
-        #dx = randn() * 0.1 * r # deslocamento aleatório em x
-        #dy = randn() * 0.1 * r # deslocamento aleatório em y
+        #dx = rand() * 0.1 * r # deslocamento aleatório em x
+        #dy = rand() * 0.1 * r # deslocamento aleatório em y
         for k = 1:nout
-            dx = (rand() - 0.5) * 2 * r * 0.15
-            dy = (rand() - 0.5) * 2 * r * 0.15
-            x[iout[k]] += dx #x[iout[k]] + dx #rand([-(0.1)*r:0.1:(0.10)*r;])
-            y[iout[k]] += dy #y[iout[k]] + dy #rand([-(0.1)*r:0.1:(0.10)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            x[iout[k]] = x[iout[k]] + rand([-(0.2)*r:0.1:(0.2)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(0.2)*r:0.1:(0.2)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
-        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
+        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
 
         open("sphere2D_$(c[1])_$(c[2])_$(c[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -347,12 +407,27 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         z = zeros(npts)
         θ = range(0, stop=2π, length=npts)
-        φ = range(0, stop=π, length=npts)
+        φ1 = range(0, stop=π/6, length=npts)
+        φ2 = range(5π/6, stop=π, length=npts)
         # rd = randn(3, npts)
-        for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
+        if iseven(npts)==false
+            l = Int(round(npts/2))
+           h = Int(ceil(npts/2))
+        else
+            l = Int(npts/2)
+            h = Int(npts/2) + 1
+        end
+        for k = 1:l #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
+            φ3 = rand(φ1)
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ3) #+ rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ3) #+ rd[2, k]
+            z[k] = c[3] + r * cos(φ3) #+ rd[3, k]
+        end
+        for k = h:npts
+            φ3 = rand(φ2) #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ3) #+ rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ3) #+ rd[2, k]
+            z[k] = c[3] + r * cos(φ3) #+ rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -368,9 +443,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         dy = randn() * 0.1 * r
         dz = randn() * 0.1 * r
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + dx#+ rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
-            y[iout[k]] = y[iout[k]] + dy#+ rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
-            z[iout[k]] = z[iout[k]] + dz#+ rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            x[iout[k]] = x[iout[k]] + dx #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;]) 
+            y[iout[k]] = y[iout[k]] + dy #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
+            z[iout[k]] = z[iout[k]] + dz #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
         end
         FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
@@ -380,7 +455,6 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
     end
 
 end
-
 """
     inverse_power_method :: function
 
@@ -457,6 +531,37 @@ function LMClass(prob, xk, ε=1.0e-5, MAXIT=100)
 end
 
 
+function LMClassCirc(prob, xk, ε=1.0e-5, MAXIT=100)
+    newdata = sort_circle_res(prob.data, xk, prob.nout)
+    R = fcircle(xk, newdata[1])
+    J = jcircle(xk, newdata[1])
+    (m,n) = size(J)
+    Id = Matrix{Float64}(I, n, n)
+    k = 1
+    λ_up = 2.0
+    λ_down = 2.0
+    λ = 1.0
+    μ = 0.7
+    dk = 0.0
+    while norm(J'*R,2) > ε && k<MAXIT
+        dk = (J' * J + λ * Id) \ ((-J') * R)
+        md = 0.5*(norm((R+J*dk),2))^2 + λ*norm(dk,2)^2 
+        Rd = fcircle(xk+dk, newdata[1])
+        ρk = (0.5*norm(R,2)^2 - 0.5*norm(Rd,2)^2)/(0.5*norm(R,2)^2 - md)
+        if ρk < μ
+            λ = λ*λ_up
+        else
+            λ = λ / λ_down
+            xk = xk + dk
+            newdata = sort_circle_res(prob.data, xk, prob.nout)
+            R = fcircle(xk, newdata[1])
+            J = jcircle(xk, newdata[1])
+            k = k+1
+        end
+    end
+    return xk, k
+end
+
 
 function LMsphere(data, x0, ε=1.0e-10, λ_min=1e-4)
     k = 1
@@ -469,7 +574,7 @@ function LMsphere(data, x0, ε=1.0e-10, λ_min=1e-4)
     λ = norm((J') * R, 2) / (norm(R, 2)^2)
     k1 = 2
     k2 = 1.5
-    while norm((J') * R) > ε && k < 1000
+    while norm((J') * R) > ε && k < 100
         d = (J' * J + λ * Id) \ ((-J') * R)
         xn = x + d
         if 0.5 * norm(fsphere(xn, data), 2)^2 < 0.5 * norm(fsphere(x, data), 2)^2
@@ -577,6 +682,76 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
+function fcircle(x,P)
+    (m,n) = size(P)
+    r = zeros(m)
+    a = zeros(m)
+    for i=1:m
+        a[i] = (dot(P[i, :] - x[4:6], x[1:3]))^2
+        for j = 1:n
+            r[i] = r[i] + (P[i, j] - x[3+j])^2
+        end
+        r[i] = (r[i] - x[7]^2)^2 + a[i]
+    end
+    return r
+end
+
+
+function jcircle(x, P)
+    (m, n) = size(P)
+    J = zeros(m, 7)
+    a = zeros(m)
+    h = zeros(m)
+    for i=1:m
+        for j=1:n
+            h[i] = h[i] + (P[i, j] - x[3+j])^2 
+        end
+        h[i] = h[i] - x[end]^2
+    end
+    for i = 1:m
+        a[i] = (dot(P[i, :] - x[4:6], x[1:3]))
+        for j=1:n
+            J[i,j] =  2*(P[i,j] - x[j+3])*a[i] 
+            J[i,j+3] = -4*(P[i,j] - x[j+3])*h[i] - 2*x[j]*a[i]
+        end
+        J[i,end] = -4*x[end]*h[i]
+    end
+    return J
+end
+
+
+
+function LMcircle(data, x0, ε=1.0e-6, λ_min=1e-4)
+    k = 1
+    x = x0
+    R = fcircle(x, data)
+    J = jcircle(x, data)
+    (m, n) = size(J)
+    xn = zeros(length(x))
+    Id = Matrix{Float64}(I, n, n)
+    λ = norm((J') * R, 2) / (norm(R, 2)^2)
+    k1 = 2
+    k2 = 1.5
+    while norm((J') * R) > ε && k < 1000
+        d = (J' * J + λ * Id) \ ((-J') * R)
+        xn = x + d
+        if 0.5 * norm(fcircle(xn, data), 2)^2 < 0.5 * norm(fcircle(x, data), 2)^2
+            x = xn
+            if λ<λ_min
+                λ = λ_min
+            else
+            λ = λ / k1
+            end
+            R = fcircle(x, data)
+            J = jcircle(x, data)
+        else
+            λ = λ * k2
+        end
+        k = k + 1
+    end
+    return x
+end
+
 function sort_circle_res(P, x, nout)
     N = length(P[:, 1])
     M = length(P[1, :])
@@ -655,8 +830,8 @@ function geradoraut(h)
     r = float(rand(5:150, 1000))
     npts = float(rand(30:3000, 300))
     nout = float([floor(Int, h * x) for x in npts])
-    for i = 1:200
-        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], npts[i], nout[i]])
+    for i = 1:100
+        build_problem("sphere2D", [1.0, 1.0], [c1[i], c2[i], r[i], npts[i], nout[i]])
     end
 end
 
@@ -677,7 +852,6 @@ function visualize(prob, a)
     end
     if prob.name == "sphere3D" || prob.name == "\tsphere3D"
         plt = plot()
-        plot!(prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, label="pontos do problema")
         n = 20
         u = range(0, stop=2 * pi, length=n)
         v = range(0, stop=pi, length=n)
