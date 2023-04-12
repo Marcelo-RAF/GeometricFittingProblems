@@ -2,7 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
 
-export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, fsphere, jsphere, LMSORT, geradoraut
+export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, LMcircle ,LMClass, LMClassCirc,geradoraut
 
 import Base.show
 
@@ -107,6 +107,7 @@ function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
     if valmin < -ε
         error("P does not have postive eigen value!")
     end
+    println(F.vectors[:,indmin])
     xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
@@ -114,7 +115,7 @@ function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
     #y =[xnorm[1] xnorm[2] xnorm[3] u]
     #display(J*y')
 
-    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
+    return  F.vectors #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) 
 end
 
 function sort_sphere_res(P, x, nout)
@@ -125,7 +126,7 @@ function sort_sphere_res(P, x, nout)
         for j = 1:m
             v[i] = v[i] + (P[i, j] - x[j])^2
         end
-        v[i] = abs(v[i] - x[end]^2)
+        v[i] = abs(v[i] - x[end]^2) 
     end
     indtrust = [1:n;]
     for i = 1:n-nout+1
@@ -145,7 +146,7 @@ function sort_sphere_res(P, x, nout)
     return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
 end
 
-function LMCIRCLEsq(data, nout, θ, ε=1.0e-8)
+function LMCircsq(data, nout, θ, ε=1.0e-6)
     ordres = sort_circle_res(data, θ, nout)
     antres = 0.0
     k = 1
@@ -253,6 +254,9 @@ function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.da
     if method == "LOVO-CGA-Hypercircle"
         return LOVOCGAHypercircle(prob.data, prob.nout, initθ)
     end
+    if method == "LMCircsq"
+        return LMCircsq(prob.data, prob.nout, initθ)
+    end
 end
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
@@ -261,20 +265,19 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         p0 = [params[1], params[2], params[3]]
         u = [params[4], params[5], params[6]]
         v = [params[7], params[8], params[9]]
-        u = u / norm(u)
-        h = v - (dot(v, u) / norm(u)^2) * u
-        v = h / norm(h)
         npts = Int(params[10])
         λ = range(0, stop = 66, length=npts)
-        μ = range(-83, stop = 20, length=npts)
-        x = zeros(npts)
-        y = zeros(npts)
-        z = zeros(npts)
+        μ = range(-50, stop = 5, length=npts)
+        x = zeros(npts^2)
+        y = zeros(npts^2)
+        z = zeros(npts^2)
         vn = cross(u,v)
         for i=1:npts
-            x[i] = p0[1] + λ[i]*u[1] + μ[i]*v[1]
-            y[i] = p0[2] + λ[i]*u[2] + μ[i]*v[2]
-            z[i] = p0[3] + λ[i]*u[3] + μ[i]*v[3]
+            for j=1:npts
+            x[i] = p0[1] + λ[i]*u[1] + μ[j]*v[1]
+            y[i] = p0[2] + λ[i]*u[2] + μ[j]*v[2]
+            z[i] = p0[3] + λ[i]*u[3] + μ[j]*v[3]
+            end
         end
         nout = Int(params[11])
         k = 1
@@ -308,6 +311,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         u = u / norm(u)
         h = v - (dot(v, u) / norm(u)^2) * u
         v = h / norm(h)
+        vn = cross(u,v)/norm(cross(u,v))
         λ = [0:4/npts:1;]
         w = zeros(Int(3.0), npts)
         #h = zeros(Int(3.0), npts)
@@ -342,11 +346,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i] + G[1, i]
-            y[i] = w[2, i] + G[2, i]
-            z[i] = w[3, i] + G[3, i]
+            x[i] = w[1, i] #+ G[1, i]
+            y[i] = w[2, i] #+ G[2, i]
+            z[i] = w[3, i] #+ G[3, i]
         end
-        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[u, v]]]
+        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[u, v]]]
 
         open("circle3D_$(c[1])_$(c[2])_$(c[3])_$(r)_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -407,27 +411,20 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         z = zeros(npts)
         θ = range(0, stop=2π, length=npts)
-        φ1 = range(0, stop=π/6, length=npts)
-        φ2 = range(5π/6, stop=π, length=npts)
+        φ = range(0, stop=π , length=npts)
+        #φ2 = range(5π/6, stop=π, length=npts)
         # rd = randn(3, npts)
-        if iseven(npts)==false
-            l = Int(round(npts/2))
-           h = Int(ceil(npts/2))
-        else
-            l = Int(npts/2)
-            h = Int(npts/2) + 1
-        end
-        for k = 1:l #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            φ3 = rand(φ1)
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ3) #+ rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ3) #+ rd[2, k]
-            z[k] = c[3] + r * cos(φ3) #+ rd[3, k]
-        end
-        for k = h:npts
-            φ3 = rand(φ2) #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ3) #+ rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ3) #+ rd[2, k]
-            z[k] = c[3] + r * cos(φ3) #+ rd[3, k]
+        #if iseven(npts)==false
+        #    l = Int(round(npts/2))
+        #   h = Int(ceil(npts/2))
+        #else
+         #   l = Int(npts/2)
+          #  h = Int(npts/2) + 1
+       # end
+        for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -659,6 +656,7 @@ function CGAHypercircle(data; ε=1.0e-4)
     n1 = n1 / α
     radius = (center * center' - 2 * n1' * A[7:9] / α - 2 * (n1' * center')^2)
 
+    display(radius)
 
     #α = norm(n1)
     #daqui pra baixo ta diferente
@@ -784,7 +782,7 @@ function sort_circle_res(P, x, nout)
     return P[indtrust[1:N-nout], :], sum(v[1:N-nout])
 end
 
-function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-12)
+function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-6)
     ordres = sort_circle_res(data, θ, nout)
     k = 1
     antres = 0.0
