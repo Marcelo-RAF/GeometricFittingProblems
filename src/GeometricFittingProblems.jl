@@ -95,6 +95,7 @@ function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
     P = p .* (DDt)
     F = eigen(P)
     indmin = 1
+    println(F.values)
     valmin = F.values[1]
     for i = 2:n
         if abs(valmin) > abs(F.values[i])
@@ -108,6 +109,7 @@ function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
         error("P does not have postive eigen value!")
     end
     println(F.vectors[:,indmin])
+    println(valmin)
     xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
@@ -266,17 +268,20 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         u = [params[4], params[5], params[6]]
         v = [params[7], params[8], params[9]]
         npts = Int(params[10])
-        λ = range(0, stop = 66, length=npts)
-        μ = range(-50, stop = 5, length=npts)
-        x = zeros(npts^2)
-        y = zeros(npts^2)
-        z = zeros(npts^2)
+       # λ = range(0, stop = 66, length=npts)
+       # μ = range(-50, stop = 5, length=npts)
+        pp = range(-50.0,stop=50.0,length=npts)
+        x = zeros(npts)
+        y = zeros(npts)
+        z = zeros(npts)
         vn = cross(u,v)
         for i=1:npts
             for j=1:npts
-            x[i] = p0[1] + λ[i]*u[1] + μ[j]*v[1]
-            y[i] = p0[2] + λ[i]*u[2] + μ[j]*v[2]
-            z[i] = p0[3] + λ[i]*u[3] + μ[j]*v[3]
+                λ = rand(pp)
+                μ = rand(pp)
+                x[i] = p0[1] + λ*u[1] + μ*v[1]
+                y[i] = p0[2] + λ*u[2] + μ*v[2]
+                z[i] = p0[3] + λ*u[3] + μ*v[3]
             end
         end
         nout = Int(params[11])
