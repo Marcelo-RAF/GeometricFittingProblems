@@ -66,7 +66,7 @@ function load_problem(filename::String)
 end
 
 
-function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
+function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     (N, n) = size(data)
     D = [data'; ones(1, N)]
     v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
@@ -95,7 +95,7 @@ function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
     P = p .* (DDt)
     F = eigen(P)
     indmin = 1
-    println(F.values)
+    #println(F.values)
     valmin = F.values[1]
     for i = 2:n
         if abs(valmin) > abs(F.values[i])
@@ -108,16 +108,47 @@ function CGAHypersphere(data; ε=1.0e-4) #algoritmo dorst esferas
     if valmin < -ε
         error("P does not have postive eigen value!")
     end
-    println(F.vectors[:,indmin])
-    println(valmin)
+    #println(F.vectors[:,indmin])
+    #println(valmin)
     xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
     #u = 0.5*norm(xnorm[1:end-2])^2
     #y =[xnorm[1] xnorm[2] xnorm[3] u]
     #display(J*y')
+    println(F.values)
+    return  F.vectors #F.vectors #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) 
+end
 
-    return  F.vectors #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) 
+
+
+function sort_plane_res(P, x, nout)
+    n = length(P[:, 1])
+    m = length(P[1, :])
+    v = zeros(n)
+    println(x)
+    for i=1:n
+        for j=1:m
+        v[i] = v[i] + P[i,j]*x[j]
+        end
+        v[i] = (v[i] - x[end])^2
+    end
+    indtrust = [1:n;]
+    for i = 1:n-nout+1
+        for j = i+1:n
+            if v[i] > v[j]
+                aux = v[j]
+                v[j] = v[i]
+                v[i] = aux
+
+                aux2 = indtrust[j]
+                indtrust[j] = indtrust[i]
+                indtrust[i] = aux2
+            end
+        end
+    end
+    #    println(indtrust[n-nout+1:n])
+    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
 end
 
 function sort_sphere_res(P, x, nout)
@@ -190,7 +221,18 @@ function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-6)
     return θ, k
 end
 
-
+function LOVOCGAHyperplane(data, nout, θ, ε=1.0e-6)
+    ordres = sort_plane_res(data, θ, nout)
+    k = 1
+    antres = 0.0
+    while abs(ordres[2] - antres) > ε
+        antres = ordres[2]
+        θ = CGAHypersphere(ordres[1])
+        ordres = sort_plane_res(data, θ, nout)
+        k = k + 1
+    end
+    return θ#, k
+end
 
 
 """
@@ -262,8 +304,47 @@ function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.da
 end
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
+    if probtype == "line"
+        println("params need to be setup as [point,direction,npts,nout]")
+        p0 = [params[1], params[2], params[3]]
+        u = [params[4], params[5], params[6]]
+        npts = Int(params[7])
+        pp = range(-50.0,stop=50.0,length=npts)
+        x = zeros(npts)
+        y = zeros(npts)
+        z = zeros(npts)
+        for i=1:npts
+            for j=1:npts
+                λ = rand(pp)
+                x[i] = p0[1] + λ*u[1] 
+                y[i] = p0[2] + λ*u[2]
+                z[i] = p0[3] + λ*u[3] 
+            end
+        end
+        nout = Int(params[8])
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        r = 3.0
+        for k = 1:nout
+            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]) 
+            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+            z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+        end
+        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(u)]; "description :" [[p0, p0]]]
+
+        open("line_$(u[1])_$(u[2])_$(u[3])_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+    end
     if probtype =="plane"
-        println("params need to be setup as [center,radious,npts,nout]")
+        println("params need to be setup as [point,directions,npts,nout]")
         p0 = [params[1], params[2], params[3]]
         u = [params[4], params[5], params[6]]
         v = [params[7], params[8], params[9]]
@@ -473,6 +554,18 @@ julia> inverse_power_method(A,[1.0,1.0,1.0])
 returns ???
 ```
 """
+
+function planest(xinit, data)
+    (m,n) = size(data)
+    r = zeros(m)
+    for i=1:m
+        for j=1:n
+            r[i] = r[i] + (data[i,j]*xinit[j])
+        end
+        r[i] = r[i] - xinit[end]
+    end
+    return r
+end
 
 function fsphere(xinit, data)
     h = data
