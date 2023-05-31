@@ -90,7 +90,6 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     aux = -copy(DDt[:, n+1])
     DDt[:, n+1] = -DDt[:, n+2]
     DDt[:, n+2] = aux
-    #display(DDt)
     p = (1.0 / N)
     P = p .* (DDt)
     F = eigen(P)
@@ -116,11 +115,48 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     #u = 0.5*norm(xnorm[1:end-2])^2
     #y =[xnorm[1] xnorm[2] xnorm[3] u]
     #display(J*y')
-    println(F.values)
-    return  F.vectors #F.vectors #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) 
+    #println(F.values)
+    P[5,:] = -P[4,:] + P[3,:] + P[2,:] + P[1,:]
+    np = nullspace(P)
+    npnorm = np/np[end-1]
+    centernp = npnorm[1:end-2]
+
+
+
+    return F #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))   #F.vectors 
 end
 
 
+
+function hildebran(data, ε=1.0e-5)
+    (N, n) = size(data)
+    D = [data'; -ones(1, N)]
+    v = [-0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
+    D = [D; v']
+    Dd = D*D'
+    F = eigen(Dd)
+    indmin = 1
+    #println(F.values)
+    valmin = F.values[1]
+    for i = 2:n
+        if abs(valmin) > abs(F.values[i])
+            if F.values[i] > -ε
+                indmin = i
+                valmin = F.values[i]
+            end
+        end
+    end
+    if valmin < -ε
+        error("P does not have postive eigen value!")
+    end
+    #println(F.vectors[:,indmin])
+    #println(valmin)
+    xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
+    center = xnorm[1:end-2]
+
+    return F #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
+    
+end
 
 function sort_plane_res(P, x, nout)
     n = length(P[:, 1])
@@ -356,6 +392,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         z = zeros(npts)
         vn = cross(u,v)
+        vn = vn/norm(vn)
         for i=1:npts
             for j=1:npts
                 λ = rand(pp)
@@ -449,9 +486,8 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         npts = Int(params[4])
         x = zeros(npts)
         y = zeros(npts)
-        xr = randn(npts)
-        yr = randn(npts)
-        #ruid = randn(2, npts)
+
+        ruid = randn(2, npts)
         #if isinteger(0.75*npts)==false
         #    l = Int(round(0.75*npts))
         #   h = Int(ceil(0.75*npts))
@@ -459,11 +495,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         #    l = Int(0.75*npts) -1
         #    h = Int(0.75*npts)
         #end
-        θ = range(0, stop =2*π, length=npts)#Int(ceil(npts/2)))
+        θ = range(0, stop = 2π, length=npts) #Int(ceil(npts/2)))
         #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) + xr[k]
-            y[k] = c[2] + r * sin(θ[k]) + yr[k]
+            x[k] = c[1] + r * cos(θ[k]) + ruid[1,k]
+            y[k] = c[2] + r * sin(θ[k]) + ruid[2,k]
         end
         nout = Int(params[5])
         k = 1
@@ -499,7 +535,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         θ = range(0, stop=2π, length=npts)
         φ = range(0, stop=π , length=npts)
         #φ2 = range(5π/6, stop=π, length=npts)
-        # rd = randn(3, npts)
+         rd = randn(3, npts)
         #if iseven(npts)==false
         #    l = Int(round(npts/2))
         #   h = Int(ceil(npts/2))
@@ -508,9 +544,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
           #  h = Int(npts/2) + 1
        # end
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -530,7 +566,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + dy #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
             z[iout[k]] = z[iout[k]] + dz #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
         end
-        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
         open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io #o que essa linha faz exatamente?
             writedlm(io, FileMatrix)
@@ -577,7 +613,7 @@ function fsphere(xinit, data)
         end
         r[i] = r[i] - xinit[end]^2
     end
-    return r
+    return r #sum(r[1:m])
 end
 
 function jsphere(xinit, data)
@@ -589,6 +625,32 @@ function jsphere(xinit, data)
             J[i, j] = -2 * (h[i, j] - xinit[j])
         end
         J[i, end] = -2 * xinit[end]
+    end
+    return J
+end
+
+function fplane(xi,data)
+    h = data
+    (m, n) = size(data)
+    r = zeros(m)
+    for i = 1:m
+        for j = 1:n
+            r[i] = r[i] + xi[j]*h[i,j] 
+        end
+        r[i] = r[i] - xi[end]
+    end
+    return r
+end
+
+function jplane(xi, data)
+    h = data
+    (m, n) = size(data)
+    J = zeros(m, n+1)
+    for i = 1:m
+        for j = 1:n
+            J[i,j] = h[i,j]
+        end
+        J[i,end] = 1.0
     end
     return J
 end
@@ -658,7 +720,7 @@ function LMClassCirc(prob, xk, ε=1.0e-5, MAXIT=100)
 end
 
 
-function LMsphere(data, x0, ε=1.0e-10, λ_min=1e-4)
+function LMsphere(data, x0, ε=1.0e-5, λ_min=1e-4)
     k = 1
     x = x0
     R = fsphere(x, data)
@@ -669,7 +731,7 @@ function LMsphere(data, x0, ε=1.0e-10, λ_min=1e-4)
     λ = norm((J') * R, 2) / (norm(R, 2)^2)
     k1 = 2
     k2 = 1.5
-    while norm((J') * R) > ε && k < 100
+    while norm((J') * R) > ε && k < 500
         d = (J' * J + λ * Id) \ ((-J') * R)
         xn = x + d
         if 0.5 * norm(fsphere(xn, data), 2)^2 < 0.5 * norm(fsphere(x, data), 2)^2
@@ -686,9 +748,40 @@ function LMsphere(data, x0, ε=1.0e-10, λ_min=1e-4)
         end
         k = k + 1
     end
-    return x
+    return x, k
 end
 
+function LMplane(data, x0, ε=1.0e-5, λ_min=1e-4)
+    k = 1
+    x = x0
+    R = fplane(x, data)
+    J = jplane(x, data)
+    (m, n) = size(J)
+    xn = zeros(length(x))
+    Id = Matrix{Float64}(I, n, n)
+    λ = norm((J') * R, 2) / (norm(R, 2)^2)
+    k1 = 2
+    k2 = 1.5
+    while norm((J') * R) > ε && k < 500
+        d = (J' * J + λ * Id) \ ((-J') * R)
+        xn = x + d
+        if 0.5 * norm(fplane(xn, data), 2)^2 < 0.5 * norm(fplane(x, data), 2)^2
+            x = xn
+            if λ<λ_min
+                λ = λ_min
+            else
+            λ = λ / k1
+            end
+            R = fplane(x, data)
+            J = jplane(x, data)
+        else
+            λ = λ * k2
+        end
+        k = k + 1
+    end
+    x = x/norm(x)
+    return x, k
+end
 
 function CGAHypercircle(data; ε=1.0e-4)
     (N, n) = size(data)
@@ -924,9 +1017,9 @@ function geradoraut(h)
     c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     r = float(rand(5:150, 1000))
-    npts = float(rand(30:3000, 300))
+    npts = float(rand(10:1000, 300))
     nout = float([floor(Int, h * x) for x in npts])
-    for i = 1:100
+    for i = 1:200
         build_problem("sphere2D", [1.0, 1.0], [c1[i], c2[i], r[i], npts[i], nout[i]])
     end
 end
@@ -976,7 +1069,6 @@ function visualize(prob, a)
         return plt
     end
     if prob.name == "circle3d" || prob.name == "\tcircle3d"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
         vn = [a[1], a[2], a[3]]
         u = [-a[2], a[1], 0.0]
         v = [0.0, a[3], -a[2]]
