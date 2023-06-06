@@ -116,14 +116,14 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     #y =[xnorm[1] xnorm[2] xnorm[3] u]
     #display(J*y')
     #println(F.values)
-    P[5,:] = -P[4,:] + P[3,:] + P[2,:] + P[1,:]
+    P[5,:] = -P[4,:] + P[3,:] + P[2,:] #+ P[1,:]
     np = nullspace(P)
     npnorm = np/np[end-1]
     centernp = npnorm[1:end-2]
 
 
 
-    return F #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))   #F.vectors 
+    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end]))  #F.vectors 
 end
 
 
@@ -154,8 +154,13 @@ function hildebran(data, ε=1.0e-5)
     xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
-    return F #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
-    
+    #Dd[5,:] = -Dd[4,:] + Dd[3,:] + Dd[2,:] + Dd[1,:]
+    #np = nullspace(Dd)
+    #npnorm = np/np[end]
+    #centernp = npnorm[1:end-2]
+
+
+    return  Dd #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
 end
 
 function sort_plane_res(P, x, nout)
@@ -611,9 +616,9 @@ function fsphere(xinit, data)
         for j = 1:n
             r[i] = (h[i, j] - xinit[j])^2 + r[i]
         end
-        r[i] = r[i] - xinit[end]^2
+        r[i] = (r[i] - xinit[end]^2)^2
     end
-    return r #sum(r[1:m])
+    return sum(r[1:m])
 end
 
 function jsphere(xinit, data)
