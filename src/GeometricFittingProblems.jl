@@ -1,6 +1,6 @@
 module GeometricFittingProblems
 
-using DelimitedFiles, LinearAlgebra, Plots
+using DelimitedFiles, LinearAlgebra, Plots, LowRankApprox
 
 export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, LMcircle ,LMClass, LMClassCirc,geradoraut
 
@@ -116,7 +116,7 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     #y =[xnorm[1] xnorm[2] xnorm[3] u]
     #display(J*y')
     #println(F.values)
-    P[5,:] = -P[4,:] + P[3,:] + P[2,:] #+ P[1,:]
+    P[5,:] = -P[4,:] + P[3,:] + P[2,:] + P[1,:]  
     np = nullspace(P)
     npnorm = np/np[end-1]
     centernp = npnorm[1:end-2]
@@ -158,9 +158,14 @@ function hildebran(data, ε=1.0e-5)
     #np = nullspace(Dd)
     #npnorm = np/np[end]
     #centernp = npnorm[1:end-2]
+    #U = curfact(Dd,rank=4)
+    #F = CUR(Dd,U)
+    #mp = nullspace(F[:R])    
+    #mpnorm = mp/mp[end]
+    #centermp = mpnorm[1:end-2]
 
 
-    return  Dd #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
+    return  #push!(centermp, √(norm(centermp,2)^2 - 2.0*mpnorm[end-1])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))   #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) 
 end
 
 function sort_plane_res(P, x, nout)
@@ -474,9 +479,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i] #+ G[1, i]
-            y[i] = w[2, i] #+ G[2, i]
-            z[i] = w[3, i] #+ G[3, i]
+            x[i] = w[1, i] + G[1, i]
+            y[i] = w[2, i] + G[2, i]
+            z[i] = w[3, i] + G[3, i]
         end
         FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[u, v]]]
 
