@@ -1,8 +1,8 @@
 module GeometricFittingProblems
 
-using DelimitedFiles, LinearAlgebra, Plots, LowRankApprox
+using DelimitedFiles, LinearAlgebra, Plots
 
-export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, LMcircle ,LMClass, LMClassCirc,geradoraut
+export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, LMcircle, LMClass, LMClassCirc, geradoraut
 
 import Base.show
 
@@ -23,10 +23,10 @@ struct FitProbType
     cluster::Bool
     noise::Bool
     solution::Array{Float64,1}
-    description:: String
-    sandbox :: Vector{Vector{Any}}
-    function FitProbType(_name,_data,_npts,_nout,_model,_dim,_cluster,_noise,_solution,_description)
-        new(_name,_data,_npts,_nout,_model,_dim,_cluster,_noise,_solution,_description,[["NONE"]])
+    description::String
+    sandbox::Vector{Vector{Any}}
+    function FitProbType(_name, _data, _npts, _nout, _model, _dim, _cluster, _noise, _solution, _description)
+        new(_name, _data, _npts, _nout, _model, _dim, _cluster, _noise, _solution, _description, [["NONE"]])
     end
 end
 
@@ -55,12 +55,12 @@ returns a FitProbType
 """
 function load_problem(filename::String)
     prob_matrix = readdlm(filename, ':')
-    (m,n) = size(prob_matrix)
-    if m==10 
+    (m, n) = size(prob_matrix)
+    if m == 10
         return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), prob_matrix[10, 2])
-    elseif m==11 
-        return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), prob_matrix[10, 2],eval(Meta.parse(prob_matrix[11,2])))
-    else 
+    elseif m == 11
+        return FitProbType(prob_matrix[1, 2], eval(Meta.parse(prob_matrix[2, 2])), prob_matrix[3, 2], prob_matrix[4, 2], eval(Meta.parse(prob_matrix[5, 2])), prob_matrix[6, 2], prob_matrix[7, 2], prob_matrix[8, 2], eval(Meta.parse(prob_matrix[9, 2])), prob_matrix[10, 2], eval(Meta.parse(prob_matrix[11, 2])))
+    else
         error("No type identified!!")
     end
 end
@@ -107,23 +107,18 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     if valmin < -ε
         error("P does not have postive eigen value!")
     end
-    #println(F.vectors[:,indmin])
-    #println(valmin)
+
     xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
-    #u = 0.5*norm(xnorm[1:end-2])^2
-    #y =[xnorm[1] xnorm[2] xnorm[3] u]
-    #display(J*y')
-    #println(F.values)
-    P[5,:] = -P[4,:] + P[3,:] + P[2,:] + P[1,:]  
+    P[end, :] = zeros(n + 2)
     np = nullspace(P)
-    npnorm = np/np[end-1]
+    npnorm = np / np[end-1]
     centernp = npnorm[1:end-2]
 
 
 
-    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end]))  #F.vectors 
+    return push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) # #
 end
 
 
@@ -133,7 +128,7 @@ function hildebran(data, ε=1.0e-5)
     D = [data'; -ones(1, N)]
     v = [-0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
     D = [D; v']
-    Dd = D*D'
+    Dd = D * D'
     F = eigen(Dd)
     indmin = 1
     #println(F.values)
@@ -154,18 +149,13 @@ function hildebran(data, ε=1.0e-5)
     xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
-    #Dd[5,:] = -Dd[4,:] + Dd[3,:] + Dd[2,:] + Dd[1,:]
+    #Dd[end,:] =  zeros(n+2)
     #np = nullspace(Dd)
     #npnorm = np/np[end]
     #centernp = npnorm[1:end-2]
-    #U = curfact(Dd,rank=4)
-    #F = CUR(Dd,U)
-    #mp = nullspace(F[:R])    
-    #mpnorm = mp/mp[end]
-    #centermp = mpnorm[1:end-2]
 
 
-    return  #push!(centermp, √(norm(centermp,2)^2 - 2.0*mpnorm[end-1])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))   #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) 
+    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1]))  
 end
 
 function sort_plane_res(P, x, nout)
@@ -173,9 +163,9 @@ function sort_plane_res(P, x, nout)
     m = length(P[1, :])
     v = zeros(n)
     println(x)
-    for i=1:n
-        for j=1:m
-        v[i] = v[i] + P[i,j]*x[j]
+    for i = 1:n
+        for j = 1:m
+            v[i] = v[i] + P[i, j] * x[j]
         end
         v[i] = (v[i] - x[end])^2
     end
@@ -205,7 +195,7 @@ function sort_sphere_res(P, x, nout)
         for j = 1:m
             v[i] = v[i] + (P[i, j] - x[j])^2
         end
-        v[i] = abs(v[i] - x[end]^2) 
+        v[i] = abs(v[i] - x[end]^2)
     end
     indtrust = [1:n;]
     for i = 1:n-nout+1
@@ -281,44 +271,6 @@ function LOVOCGAHyperplane(data, nout, θ, ε=1.0e-6)
 end
 
 
-"""
-    solve :: Function
-
-This functions is able to solve a fitting problem previous loaded.
-
-# Example
-```
-julia-repl
-julia> prob =  load_problem("sphere2D_50.0_50.0_8.0_10.csv")
-
-julia> solve(prob,"CGA-Hypersphere")
-
-```
-return the smallest positive eigen and eigen vector associated which give to us the desired parameters.
-
-# Example
-```
-julia-repl
-julia> prob =  load_problem("sphere2D_50.0_50.0_8.0_10.csv")
-
-julia> solve(prob,"LOVO-CGA-Hypersphere")
-
-```
-return the desired parameters.
-
-another way to run is using a particular initial guess.
-
-# Example
-```
-julia-repl
-julia> prob =  load_problem("sphere2D_50.0_50.0_8.0_10.csv")
-
-julia> solve(prob,"LOVO-CGA-Hypersphere",rand(3))
-
-```
-
-"""
-
 
 function solve(prob::FitProbType, method::String, initθ=CGAHypersphere(prob.data))
     if method == "LMsphere"
@@ -355,16 +307,16 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         p0 = [params[1], params[2], params[3]]
         u = [params[4], params[5], params[6]]
         npts = Int(params[7])
-        pp = range(-50.0,stop=50.0,length=npts)
+        pp = range(-50.0, stop=50.0, length=npts)
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
-        for i=1:npts
-            for j=1:npts
+        for i = 1:npts
+            for j = 1:npts
                 λ = rand(pp)
-                x[i] = p0[1] + λ*u[1] 
-                y[i] = p0[2] + λ*u[2]
-                z[i] = p0[3] + λ*u[3] 
+                x[i] = p0[1] + λ * u[1]
+                y[i] = p0[2] + λ * u[2]
+                z[i] = p0[3] + λ * u[3]
             end
         end
         nout = Int(params[8])
@@ -379,7 +331,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         r = 3.0
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]) 
+            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
@@ -389,27 +341,27 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             writedlm(io, FileMatrix)
         end
     end
-    if probtype =="plane"
+    if probtype == "plane"
         println("params need to be setup as [point,directions,npts,nout]")
         p0 = [params[1], params[2], params[3]]
         u = [params[4], params[5], params[6]]
         v = [params[7], params[8], params[9]]
         npts = Int(params[10])
-       # λ = range(0, stop = 66, length=npts)
-       # μ = range(-50, stop = 5, length=npts)
-        pp = range(-50.0,stop=50.0,length=npts)
+        # λ = range(0, stop = 66, length=npts)
+        # μ = range(-50, stop = 5, length=npts)
+        pp = range(-50.0, stop=50.0, length=npts)
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
-        vn = cross(u,v)
-        vn = vn/norm(vn)
-        for i=1:npts
-            for j=1:npts
+        vn = cross(u, v)
+        vn = vn / norm(vn)
+        for i = 1:npts
+            for j = 1:npts
                 λ = rand(pp)
                 μ = rand(pp)
-                x[i] = p0[1] + λ*u[1] + μ*v[1]
-                y[i] = p0[2] + λ*u[2] + μ*v[2]
-                z[i] = p0[3] + λ*u[3] + μ*v[3]
+                x[i] = p0[1] + λ * u[1] + μ * v[1]
+                y[i] = p0[2] + λ * u[2] + μ * v[2]
+                z[i] = p0[3] + λ * u[3] + μ * v[3]
             end
         end
         nout = Int(params[11])
@@ -424,7 +376,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         r = 3.0
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]) 
+            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
@@ -444,7 +396,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         u = u / norm(u)
         h = v - (dot(v, u) / norm(u)^2) * u
         v = h / norm(h)
-        vn = cross(u,v)/norm(cross(u,v))
+        vn = cross(u, v) / norm(cross(u, v))
         λ = [0:4/npts:1;]
         w = zeros(Int(3.0), npts)
         #h = zeros(Int(3.0), npts)
@@ -498,18 +450,18 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
 
         ruid = randn(2, npts)
-        #if isinteger(0.75*npts)==false
-        #    l = Int(round(0.75*npts))
-        #   h = Int(ceil(0.75*npts))
-        #else
-        #    l = Int(0.75*npts) -1
-        #    h = Int(0.75*npts)
-        #end
-        θ = range(0, stop = 2π, length=npts) #Int(ceil(npts/2)))
+        for i = 1:2
+            for j = 1:npts
+                if ruid[i, j] > 0.5
+                    ruid[i, j] = 0.1 * randn()
+                end
+            end
+        end
+        θ = range(0, stop=2π, length=npts) #Int(ceil(npts/2)))
         #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) + ruid[1,k]
-            y[k] = c[2] + r * sin(θ[k]) + ruid[2,k]
+            x[k] = c[1] + r * cos(θ[k]) + ruid[1, k]
+            y[k] = c[2] + r * sin(θ[k]) + ruid[2, k]
         end
         nout = Int(params[5])
         k = 1
@@ -543,16 +495,16 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         z = zeros(npts)
         θ = range(0, stop=2π, length=npts)
-        φ = range(0, stop=π , length=npts)
+        φ = range(0, stop=π, length=npts)
         #φ2 = range(5π/6, stop=π, length=npts)
-         rd = randn(3, npts)
+        rd = randn(3, npts)
         #if iseven(npts)==false
         #    l = Int(round(npts/2))
         #   h = Int(ceil(npts/2))
         #else
-         #   l = Int(npts/2)
-          #  h = Int(npts/2) + 1
-       # end
+        #   l = Int(npts/2)
+        #  h = Int(npts/2) + 1
+        # end
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
             x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
             y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
@@ -584,34 +536,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
     end
 
 end
-"""
-    inverse_power_method :: function
 
-This functions implements the inverse power method to find the smallest eigen value associated to an array A.
-
-# Examples
-```
-julia-repl
-
-julia> A = [1.0 2.0 0.0; 2.0 -5.0 3.0; 0.0 3.0 4.0]
-
-julia> inverse_power_method(A,[1.0,1.0,1.0])
-
-returns ???
-```
-"""
-
-function planest(xinit, data)
-    (m,n) = size(data)
-    r = zeros(m)
-    for i=1:m
-        for j=1:n
-            r[i] = r[i] + (data[i,j]*xinit[j])
-        end
-        r[i] = r[i] - xinit[end]
-    end
-    return r
-end
 
 function fsphere(xinit, data)
     h = data
@@ -621,10 +546,11 @@ function fsphere(xinit, data)
         for j = 1:n
             r[i] = (h[i, j] - xinit[j])^2 + r[i]
         end
-        r[i] = (r[i] - xinit[end]^2)^2
+        r[i] = r[i] - xinit[end]^2
     end
-    return sum(r[1:m])
+    return r
 end
+
 
 function jsphere(xinit, data)
     h = data
@@ -639,13 +565,16 @@ function jsphere(xinit, data)
     return J
 end
 
-function fplane(xi,data)
+
+
+
+function fplane(xi, data)
     h = data
     (m, n) = size(data)
     r = zeros(m)
     for i = 1:m
         for j = 1:n
-            r[i] = r[i] + xi[j]*h[i,j] 
+            r[i] = r[i] + xi[j] * h[i, j]
         end
         r[i] = r[i] - xi[end]
     end
@@ -655,12 +584,12 @@ end
 function jplane(xi, data)
     h = data
     (m, n) = size(data)
-    J = zeros(m, n+1)
+    J = zeros(m, n + 1)
     for i = 1:m
         for j = 1:n
-            J[i,j] = h[i,j]
+            J[i, j] = h[i, j]
         end
-        J[i,end] = 1.0
+        J[i, end] = 1.0
     end
     return J
 end
@@ -670,7 +599,7 @@ function LMClass(prob, xk, ε=1.0e-5, MAXIT=100)
     newdata = sort_sphere_res(prob.data, xk, prob.nout)
     R = fsphere(xk, newdata[1])
     J = jsphere(xk, newdata[1])
-    (m,n) = size(J)
+    (m, n) = size(J)
     Id = Matrix{Float64}(I, n, n)
     k = 1
     λ_up = 2.0
@@ -678,20 +607,20 @@ function LMClass(prob, xk, ε=1.0e-5, MAXIT=100)
     λ = 1.0
     μ = 0.7
     dk = 0.0
-    while norm(J'*R,2) > ε && k<MAXIT
+    while norm(J' * R, 2) > ε && k < MAXIT
         dk = (J' * J + λ * Id) \ ((-J') * R)
-        md = 0.5*(norm((R+J*dk),2))^2 + λ*norm(dk,2)^2 
-        Rd = fsphere(xk+dk, newdata[1])
-        ρk = (0.5*norm(R,2)^2 - 0.5*norm(Rd,2)^2)/(0.5*norm(R,2)^2 - md)
+        md = 0.5 * (norm((R + J * dk), 2))^2 + λ * norm(dk, 2)^2
+        Rd = fsphere(xk + dk, newdata[1])
+        ρk = (0.5 * norm(R, 2)^2 - 0.5 * norm(Rd, 2)^2) / (0.5 * norm(R, 2)^2 - md)
         if ρk < μ
-            λ = λ*λ_up
+            λ = λ * λ_up
         else
             λ = λ / λ_down
             xk = xk + dk
             newdata = sort_sphere_res(prob.data, xk, prob.nout)
             R = fsphere(xk, newdata[1])
             J = jsphere(xk, newdata[1])
-            k = k+1
+            k = k + 1
         end
     end
     return xk, k
@@ -702,7 +631,7 @@ function LMClassCirc(prob, xk, ε=1.0e-5, MAXIT=100)
     newdata = sort_circle_res(prob.data, xk, prob.nout)
     R = fcircle(xk, newdata[1])
     J = jcircle(xk, newdata[1])
-    (m,n) = size(J)
+    (m, n) = size(J)
     Id = Matrix{Float64}(I, n, n)
     k = 1
     λ_up = 2.0
@@ -710,20 +639,20 @@ function LMClassCirc(prob, xk, ε=1.0e-5, MAXIT=100)
     λ = 1.0
     μ = 0.7
     dk = 0.0
-    while norm(J'*R,2) > ε && k<MAXIT
+    while norm(J' * R, 2) > ε && k < MAXIT
         dk = (J' * J + λ * Id) \ ((-J') * R)
-        md = 0.5*(norm((R+J*dk),2))^2 + λ*norm(dk,2)^2 
-        Rd = fcircle(xk+dk, newdata[1])
-        ρk = (0.5*norm(R,2)^2 - 0.5*norm(Rd,2)^2)/(0.5*norm(R,2)^2 - md)
+        md = 0.5 * (norm((R + J * dk), 2))^2 + λ * norm(dk, 2)^2
+        Rd = fcircle(xk + dk, newdata[1])
+        ρk = (0.5 * norm(R, 2)^2 - 0.5 * norm(Rd, 2)^2) / (0.5 * norm(R, 2)^2 - md)
         if ρk < μ
-            λ = λ*λ_up
+            λ = λ * λ_up
         else
             λ = λ / λ_down
             xk = xk + dk
             newdata = sort_circle_res(prob.data, xk, prob.nout)
             R = fcircle(xk, newdata[1])
             J = jcircle(xk, newdata[1])
-            k = k+1
+            k = k + 1
         end
     end
     return xk, k
@@ -746,10 +675,10 @@ function LMsphere(data, x0, ε=1.0e-5, λ_min=1e-4)
         xn = x + d
         if 0.5 * norm(fsphere(xn, data), 2)^2 < 0.5 * norm(fsphere(x, data), 2)^2
             x = xn
-            if λ<λ_min
+            if λ < λ_min
                 λ = λ_min
             else
-            λ = λ / k1
+                λ = λ / k1
             end
             R = fsphere(x, data)
             J = jsphere(x, data)
@@ -777,10 +706,10 @@ function LMplane(data, x0, ε=1.0e-5, λ_min=1e-4)
         xn = x + d
         if 0.5 * norm(fplane(xn, data), 2)^2 < 0.5 * norm(fplane(x, data), 2)^2
             x = xn
-            if λ<λ_min
+            if λ < λ_min
                 λ = λ_min
             else
-            λ = λ / k1
+                λ = λ / k1
             end
             R = fplane(x, data)
             J = jplane(x, data)
@@ -789,7 +718,7 @@ function LMplane(data, x0, ε=1.0e-5, λ_min=1e-4)
         end
         k = k + 1
     end
-    x = x/norm(x)
+    x = x / norm(x)
     return x, k
 end
 
@@ -881,11 +810,11 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
-function fcircle(x,P)
-    (m,n) = size(P)
+function fcircle(x, P)
+    (m, n) = size(P)
     r = zeros(m)
     a = zeros(m)
-    for i=1:m
+    for i = 1:m
         a[i] = (dot(P[i, :] - x[4:6], x[1:3]))^2
         for j = 1:n
             r[i] = r[i] + (P[i, j] - x[3+j])^2
@@ -901,19 +830,19 @@ function jcircle(x, P)
     J = zeros(m, 7)
     a = zeros(m)
     h = zeros(m)
-    for i=1:m
-        for j=1:n
-            h[i] = h[i] + (P[i, j] - x[3+j])^2 
+    for i = 1:m
+        for j = 1:n
+            h[i] = h[i] + (P[i, j] - x[3+j])^2
         end
         h[i] = h[i] - x[end]^2
     end
     for i = 1:m
         a[i] = (dot(P[i, :] - x[4:6], x[1:3]))
-        for j=1:n
-            J[i,j] =  2*(P[i,j] - x[j+3])*a[i] 
-            J[i,j+3] = -4*(P[i,j] - x[j+3])*h[i] - 2*x[j]*a[i]
+        for j = 1:n
+            J[i, j] = 2 * (P[i, j] - x[j+3]) * a[i]
+            J[i, j+3] = -4 * (P[i, j] - x[j+3]) * h[i] - 2 * x[j] * a[i]
         end
-        J[i,end] = -4*x[end]*h[i]
+        J[i, end] = -4 * x[end] * h[i]
     end
     return J
 end
@@ -936,10 +865,10 @@ function LMcircle(data, x0, ε=1.0e-6, λ_min=1e-4)
         xn = x + d
         if 0.5 * norm(fcircle(xn, data), 2)^2 < 0.5 * norm(fcircle(x, data), 2)^2
             x = xn
-            if λ<λ_min
+            if λ < λ_min
                 λ = λ_min
             else
-            λ = λ / k1
+                λ = λ / k1
             end
             R = fcircle(x, data)
             J = jcircle(x, data)
@@ -1021,15 +950,15 @@ end
 
 function geradoraut(h)
     n = 1000  # tamanho da lista desejada
-    a = -100  # limite inferior do intervalo
-    b = 100  # limite superior do intervalo
+    a = -120  # limite inferior do intervalo
+    b = 120  # limite superior do intervalo
     c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
     c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    r = float(rand(5:150, 1000))
-    npts = float(rand(10:1000, 300))
+    r = float(rand(5:170, 1000))
+    npts = float(rand(10:2000, 401))
     nout = float([floor(Int, h * x) for x in npts])
-    for i = 1:200
+    for i = 1:400
         build_problem("sphere2D", [1.0, 1.0], [c1[i], c2[i], r[i], npts[i], nout[i]])
     end
 end
