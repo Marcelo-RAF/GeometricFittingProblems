@@ -1,23 +1,23 @@
 function gradtangential(x, data)
     (N, n) = size(data)
-    v = [0.5 * norm(data[i, :], 2)^2 for i = 1:N]
-    h = [norm(data[i, :], 2)^2 for i = 1:N]
-    D = [data';v']
-    D = [D; ones(1,N)]
+    v = [0.5 * norm(data[i, :],2)^2 for i = 1:N]
+    h = [norm(data[i, :],2)^2 for i = 1:N]
     pp = zeros(N)
     for i = 1:N
         pp[i] = dot(data[i, :], x[1:end-2]) - x[end-1] - x[end] * v[i]
     end
     J = zeros(N, n + 2)
     for i = 1:N
-        for j = i:n
-            J[i, j] = 8 * pp[i] * data[i, j]
+        for j = 1:n
+            J[i, j] = 2*pp[i]*data[i,j] 
         end
-        J[i, end-1] = -8 * pp[i]
-        J[i, end] = -4 * pp[i] * h[i]
+        J[i, end-1] = -2*pp[i]
+        J[i, end] = -pp[i]*h[i]
     end
     return sum(J, dims=1)[:, :]
 end
+
+
 
 function gradgeometric(x, h)
     (m, n) = size(h)

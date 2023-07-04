@@ -116,9 +116,7 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     npnorm = np / np[end-1]
     centernp = npnorm[1:end-2]
 
-
-
-    return push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) # #
+    return push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) # 
 end
 
 
@@ -149,13 +147,13 @@ function hildebran(data, ε=1.0e-5)
     xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
-    #Dd[end,:] =  zeros(n+2)
-    #np = nullspace(Dd)
-    #npnorm = np/np[end]
-    #centernp = npnorm[1:end-2]
+    Dd[end,:] =  zeros(n+2)
+    np = nullspace(Dd)
+    npnorm = np/np[end]
+    centernp = npnorm[1:end-2]
 
 
-    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1]))  
+    return  np#push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #  
 end
 
 function sort_plane_res(P, x, nout)
@@ -460,8 +458,8 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         θ = range(0, stop=2π, length=npts) #Int(ceil(npts/2)))
         #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) + ruid[1, k]
-            y[k] = c[2] + r * sin(θ[k]) + ruid[2, k]
+            x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]
+            y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k]
         end
         nout = Int(params[5])
         k = 1
