@@ -111,12 +111,12 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
-    P[end, :] = zeros(n + 2)
-    np = nullspace(P)
-    npnorm = np / np[end-1]
-    centernp = npnorm[1:end-2]
+    #P[end, :] = zeros(n + 2)
+    #np = nullspace(P)
+    #npnorm = np / np[end-1]
+    #centernp = npnorm[1:end-2]
 
-    return push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end])) #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) # 
+    return  F #) #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))   
 end
 
 
@@ -153,7 +153,7 @@ function hildebran(data, ε=1.0e-5)
     centernp = npnorm[1:end-2]
 
 
-    return  np#push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #  
+    return  F #F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #  
 end
 
 function sort_plane_res(P, x, nout)
@@ -448,18 +448,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
 
         ruid = randn(2, npts)
-        for i = 1:2
-            for j = 1:npts
-                if ruid[i, j] > 0.5
-                    ruid[i, j] = 0.1 * randn()
-                end
-            end
-        end
         θ = range(0, stop=2π, length=npts) #Int(ceil(npts/2)))
         #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]
-            y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k]
+            x[k] = c[1] + r * cos(θ[k]) + ruid[1, k]
+            y[k] = c[2] + r * sin(θ[k]) + ruid[2, k]
         end
         nout = Int(params[5])
         k = 1
@@ -808,6 +801,10 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
+
+
+
+
 function fcircle(x, P)
     (m, n) = size(P)
     r = zeros(m)
@@ -944,6 +941,35 @@ function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-
     else
         return q, 1.0 / s
     end
+end
+
+function externo(u,v)
+    m = length(u)
+    p = Int((m*(m-1))/2)
+    w = zeros(p)
+    k=1
+    for i=1:m
+        for j=(i+1):m
+            w[k] = u[i]*v[j] - u[j]v[i]
+            k = k+1
+        end
+    end
+    return w
+end
+
+function findcirc(s1,s2)
+    vn = s1[1:end-1] - s2[1:end-1]
+    vn = vn/norm(vn)
+    r = norm(s1[1:end-1] - s2[1:end-1])
+    r1 = s1[end]
+    r2 = s2[end]
+    t = (r2^2-r1^2-r^2)/(2*r^2)
+    rc = sqrt(r1^2 - (r1^2 - r2^2 + r^2)^2/(4*r^2))
+    #rc = r^2*t + t*(r1^2 -r2^2 + r^2) + 
+    d = 0.5*(r1^2 - r2^2 + r^2) + dot(s1[1:end-1], s2[1:end-1] - s1[1:end-1])
+    cc = s1[1:3] - t*(s2[1:3]-s1[1:3])
+    sol = [vn;d;cc;rc]
+    return sol
 end
 
 function geradoraut(h)
