@@ -108,15 +108,19 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
         error("P does not have postive eigen value!")
     end
 
+    s1 = F.vectors[:,2]
+    s2 = F.vectors[:,3]
+
     xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
-    #P[end, :] = zeros(n + 2)
-    #np = nullspace(P)
+    P[end, :] = zeros(n + 2)
+    P[2, :] = zeros(n + 2)
+    np = nullspace(P)
     #npnorm = np / np[end-1]
     #centernp = npnorm[1:end-2]
 
-    return  F #) #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))   
+    return  s1,s2 #np[:,1], np[:,2] #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))   
 end
 
 
@@ -146,14 +150,24 @@ function hildebran(data, ε=1.0e-5)
     #println(valmin)
     xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
-
-    Dd[end,:] =  zeros(n+2)
+    #s1 = F.vectors[:,1]
+    #s2 = F.vectors[:,2]
+    #Dd[5,:] =  zeros(n+2)
+    #Dd[2,:] = zeros(n+2) 
     np = nullspace(Dd)
-    npnorm = np/np[end]
-    centernp = npnorm[1:end-2]
+    s1 = np[:,1]
+    s2 = np[:,2]
+    aux = s1[4]
+    s1[4] = s1[5]
+    s1[5] = aux 
+    aux2 = s2[4]
+    s2[4] = s2[5]
+    s2[5] = aux2
+    #npnorm = np/np[end]
+    #centernp = npnorm[1:end-2]
 
 
-    return  F #F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #  
+    return  s1,s2#F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #  
 end
 
 function sort_plane_res(P, x, nout)
@@ -497,9 +511,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         #  h = Int(npts/2) + 1
         # end
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -801,7 +815,19 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
-
+function circleag(s1,s2)
+    s = externo(s1,s2)
+    A = [s[5], -s[2], s[1], -s[3], -s[6], -s[8], s[4], s[7], s[9], s[10]]
+    n1 = -A[4:6]
+    d1, d2, d3 = n1[1], n1[2], n1[3]
+    C = [d1 d2 d3; 0 d3 -d2; -d3 0 d1; d2 -d1 0]
+    α = norm(A[4:6])
+    center = [A[10]; A[1:3]]' / -C'    #talvez tenha que alterar muito
+    n1 = n1 / α
+    radius = abs((center * center' - 2 * n1' * A[7:9] / α - 2 * (n1' * center')^2))
+    u = [n1[1], n1[2], n1[3], center[1], center[2], center[3], sqrt(radius)]
+    return u
+end
 
 
 
@@ -816,7 +842,7 @@ function fcircle(x, P)
         end
         r[i] = (r[i] - x[7]^2)^2 + a[i]
     end
-    return r
+    return sum(r)
 end
 
 
@@ -839,7 +865,7 @@ function jcircle(x, P)
         end
         J[i, end] = -4 * x[end] * h[i]
     end
-    return J
+    return sum(J, dims=1)[:, :]#J
 end
 
 
@@ -984,6 +1010,25 @@ function geradoraut(h)
     nout = float([floor(Int, h * x) for x in npts])
     for i = 1:400
         build_problem("sphere2D", [1.0, 1.0], [c1[i], c2[i], r[i], npts[i], nout[i]])
+    end
+end
+
+function geradorcircle()
+    n = 1000  # tamanho da lista desejada
+    a = -120  # limite inferior do intervalo
+    b = 120  # limite superior do intervalo
+    x = -50
+    y = 50
+    c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
+    c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
+    c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
+    v1 = round.(float(rand(n) .* (y - x) .+ x), digits=1)
+    v2 = round.(float(rand(n) .* (y - x) .+ x), digits=1)
+    v3 = round.(float(rand(n) .* (y - x) .+ x), digits=1)
+    r = float(rand(5:170, 1000))
+    npts = float(rand(10:2000, 401))
+    for i = 1:400
+        build_problem("circle3d", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], v1[i], v2[i], v3[i], -v2[i], v1[i],0.0 ,npts[i], 0])
     end
 end
 
