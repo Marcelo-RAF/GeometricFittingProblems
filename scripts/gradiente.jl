@@ -12,7 +12,7 @@ function gradtangential(x, data)
             J[i, j] = 2*pp[i]*data[i,j] 
         end
         J[i, end-1] = -2*pp[i]
-        J[i, end] = -pp[i]*h[i]
+        J[i, end] = (pp[i])
     end
     return sum(J, dims=1)[:, :]
 end
@@ -96,5 +96,23 @@ function residgeometric(x, h)
         r[i] = abs(sqrt(r[i]) - x[end])
     end
     return sum(r[1:m])
+end
+
+function residcirc(s1,s2,data)
+    (N, n) = size(data)
+    D = [data'; -ones(1, N)]
+    v = [-0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
+    D = [D; v']
+    aux = s1[end-1]
+    s1[end] = s1[end-1]
+    s1[end-1] = aux
+    aux2 = s2[end-1]
+    s2[end] = s2[end-1]
+    s2[end-1] = aux2
+    h = zeros(N)
+    for i=1:N
+            h[i] = norm((dot(D'[i,:],s1)*s2 - dot(D'[i,:],s2)*s1))
+    end
+    return h
 end
 

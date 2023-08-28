@@ -108,19 +108,19 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
         error("P does not have postive eigen value!")
     end
 
-    s1 = F.vectors[:,2]
-    s2 = F.vectors[:,3]
+    #s1 = F.vectors[:,2]
+    #s2 = F.vectors[:,3]
 
     xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
     center = xnorm[1:end-2]
 
-    P[end, :] = zeros(n + 2)
-    P[2, :] = zeros(n + 2)
-    np = nullspace(P)
+    #P[end, :] = zeros(n + 2)
+    #P[2, :] = zeros(n + 2)
+    #np = nullspace(P)
     #npnorm = np / np[end-1]
     #centernp = npnorm[1:end-2]
 
-    return  s1,s2 #np[:,1], np[:,2] #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))   
+    return  push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))    
 end
 
 
@@ -152,22 +152,22 @@ function hildebran(data, ε=1.0e-5)
     center = xnorm[1:end-2]
     #s1 = F.vectors[:,1]
     #s2 = F.vectors[:,2]
-    #Dd[5,:] =  zeros(n+2)
+    #Dd[end,:] =  zeros(n+2)
     #Dd[2,:] = zeros(n+2) 
-    np = nullspace(Dd)
-    s1 = np[:,1]
-    s2 = np[:,2]
-    aux = s1[4]
-    s1[4] = s1[5]
-    s1[5] = aux 
-    aux2 = s2[4]
-    s2[4] = s2[5]
-    s2[5] = aux2
+    #np = nullspace(Dd)
+    #s1 = np[:,1]
+    #s2 = np[:,2]
+    #aux = s1[4]
+    #s1[4] = s1[5]
+    #s1[5] = aux 
+    #aux2 = s2[4]
+    #s2[4] = s2[5]
+    #s2[5] = aux2
     #npnorm = np/np[end]
     #centernp = npnorm[1:end-2]
 
 
-    return  s1,s2#F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) #  
+    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) # 
 end
 
 function sort_plane_res(P, x, nout)
