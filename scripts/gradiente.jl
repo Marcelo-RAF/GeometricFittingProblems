@@ -38,7 +38,7 @@ function gradgeometric(x, h)
         end
         J[i, end] = -2 * p[i]
     end
-    return sum(J, dims=1)[:, :]
+    return norm(sum(J, dims=1)[:, :])
 end
 
 function gradalgebric(x, h)
@@ -59,8 +59,9 @@ function gradalgebric(x, h)
         end
         J[i, end] = -4 * x[end] * r[i]
     end
-    return sum(J, dims=1)[:, :]
+    return norm(sum(J, dims=1)[:, :])
 end
+
 
 
 

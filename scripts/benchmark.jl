@@ -139,7 +139,7 @@ end
 
 function calcgradresid(file::String)
   set_problem = String.(readdlm(file))
-  csv_file = open("CGA_autovalor.csv", "w")
+  csv_file = open("hild_autovalor.csv", "w")
   #csv_file_benchmark = open("benchCGA_AV.csv", "w")
   df = DataFrame()
   k = 0
@@ -147,14 +147,14 @@ function calcgradresid(file::String)
   for probname ∈ set_problem
     log_file = open("log.txt", "w")
     prob = load_problem(probname)
-    s = CGAHypersphere(prob.data)
+    s = hildebran(prob.data, "eigenvector")
     solved = false
     try
       ch1 = residalgebric(s, prob.data)
       ch2 = residgeometric(s, prob.data)
       ch3 = gradalgebric(s, prob.data)
       ch4 = gradgeometric(s, prob.data)
-      a = @benchmark CGAHypersphere($prob.data) samples = 5000 #usa
+      a = @benchmark hildebran($prob.data,$"eigenvector") samples = 5000 #usa
       k = k + 1
       println(k)
       row = DataFrame([(probname, prob.npts, s, ch1, ch2, ch3, ch4, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])

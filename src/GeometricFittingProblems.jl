@@ -66,7 +66,7 @@ function load_problem(filename::String)
 end
 
 
-function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
+function CGAHypersphere(data, method::String,  ε=1.0e-5) #algoritmo dorst esferas
     (N, n) = size(data)
     D = [data'; ones(1, N)]
     v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
@@ -77,97 +77,72 @@ function CGAHypersphere(data; ε=1.0e-5) #algoritmo dorst esferas
     H = -copy(J[:, n+1])
     J[:, n+1] = -J[:, n+2]
     J[:, n+2] = H
-    #display(J)
-
     DDt = D * D'
-    #println("Second D")
-    #M = zeros(n+2,n+2)
-    #for i=1:n
-    # M[i,i] = 1.0
-    #end
-    #M[n+1,n+2] = -1.0
-    #M[n+2,n+1] = -1.0
     aux = -copy(DDt[:, n+1])
     DDt[:, n+1] = -DDt[:, n+2]
     DDt[:, n+2] = aux
     p = (1.0 / N)
     P = p .* (DDt)
-    F = eigen(P)
-    indmin = 1
-    #println(F.values)
-    valmin = F.values[1]
-    for i = 2:n
-        if abs(valmin) > abs(F.values[i])
-            if F.values[i] > -ε
-                indmin = i
-                valmin = F.values[i]
+    if method == "eigenvector"
+        F = eigen(P)
+        indmin = 1
+        #println(F.values)
+        valmin = F.values[1]
+        for i = 2:n
+            if abs(valmin) > abs(F.values[i])
+                if F.values[i] > -ε
+                    indmin = i
+                    valmin = F.values[i]
+                end
             end
         end
+        if valmin < -ε
+            error("P does not have postive eigen value!")
+        end
+        xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
+        center = xnorm[1:end-2]
+        return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
+    elseif method == "nullspace"
+        P[end, :] = zeros(n + 2)
+        np = nullspace(P)
+        npnorm = np / np[end-1]
+        centernp = npnorm[1:end-2]
+        push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))   
     end
-    if valmin < -ε
-        error("P does not have postive eigen value!")
-    end
-
-    #s1 = F.vectors[:,2]
-    #s2 = F.vectors[:,3]
-
-    xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
-    center = xnorm[1:end-2]
-
-    #P[end, :] = zeros(n + 2)
-    #P[2, :] = zeros(n + 2)
-    #np = nullspace(P)
-    #npnorm = np / np[end-1]
-    #centernp = npnorm[1:end-2]
-
-    return  push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end])) #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))    
 end
 
-
-
-function hildebran(data, ε=1.0e-5)
+function hildebran(data, method::String ,ε=1.0e-5)
     (N, n) = size(data)
     D = [data'; -ones(1, N)]
     v = [-0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
     D = [D; v']
     Dd = D * D'
-    F = eigen(Dd)
-    indmin = 1
     #println(F.values)
-    valmin = F.values[1]
-    for i = 2:n
-        if abs(valmin) > abs(F.values[i])
-            if F.values[i] > -ε
-                indmin = i
-                valmin = F.values[i]
+    if method == "eigenvector"
+        F = eigen(Dd)
+        indmin = 1
+        valmin = F.values[1]
+        for i = 2:n
+            if abs(valmin) > abs(F.values[i])
+                if F.values[i] > -ε
+                    indmin = i
+                    valmin = F.values[i]
+                end
             end
         end
+        if valmin < -ε
+            error("P does not have postive eigen value!")
+        end
+        xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
+        center = xnorm[1:end-2]
+        return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
+    elseif method == "nullspace"
+        Dd[end,:] =  zeros(n+2)
+        np = nullspace(Dd)
+        npnorm = np/np[end]
+        centernp = npnorm[1:end-2]
+        return push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1]))  
     end
-    if valmin < -ε
-        error("P does not have postive eigen value!")
-    end
-    #println(F.vectors[:,indmin])
-    #println(valmin)
-    xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
-    center = xnorm[1:end-2]
-    #s1 = F.vectors[:,1]
-    #s2 = F.vectors[:,2]
-    #Dd[end,:] =  zeros(n+2)
-    #Dd[2,:] = zeros(n+2) 
-    #np = nullspace(Dd)
-    #s1 = np[:,1]
-    #s2 = np[:,2]
-    #aux = s1[4]
-    #s1[4] = s1[5]
-    #s1[5] = aux 
-    #aux2 = s2[4]
-    #s2[4] = s2[5]
-    #s2[5] = aux2
-    #npnorm = np/np[end]
-    #centernp = npnorm[1:end-2]
-
-
-    return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1])) #push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1])) # 
 end
 
 function sort_plane_res(P, x, nout)
