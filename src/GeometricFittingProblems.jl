@@ -66,7 +66,7 @@ function load_problem(filename::String)
 end
 
 
-function CGAHypersphere(data, method::String,  ε=1.0e-5) #algoritmo dorst esferas
+function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esferas
     (N, n) = size(data)
     D = [data'; ones(1, N)]
     v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
@@ -107,11 +107,11 @@ function CGAHypersphere(data, method::String,  ε=1.0e-5) #algoritmo dorst esfer
         np = nullspace(P)
         npnorm = np / np[end-1]
         centernp = npnorm[1:end-2]
-        push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))   
+        push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))
     end
 end
 
-function hildebran(data, method::String ,ε=1.0e-5)
+function hildebran(data, method::String, ε=1.0e-5)
     (N, n) = size(data)
     D = [data'; -ones(1, N)]
     v = [-0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
@@ -137,11 +137,11 @@ function hildebran(data, method::String ,ε=1.0e-5)
         center = xnorm[1:end-2]
         return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
     elseif method == "nullspace"
-        Dd[end,:] =  zeros(n+2)
+        Dd[end, :] = zeros(n + 2)
         np = nullspace(Dd)
-        npnorm = np/np[end]
+        npnorm = np / np[end]
         centernp = npnorm[1:end-2]
-        return push!(centernp, √(norm(centernp,2)^2 - 2.0*npnorm[end-1]))  
+        return push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end-1]))
     end
 end
 
@@ -790,8 +790,8 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
-function circleag(s1,s2)
-    s = externo(s1,s2)
+function circleag(s1, s2)
+    s = externo(s1, s2)
     A = [s[5], -s[2], s[1], -s[3], -s[6], -s[8], s[4], s[7], s[9], s[10]]
     n1 = -A[4:6]
     d1, d2, d3 = n1[1], n1[2], n1[3]
@@ -944,32 +944,32 @@ function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-
     end
 end
 
-function externo(u,v)
+function externo(u, v)
     m = length(u)
-    p = Int((m*(m-1))/2)
+    p = Int((m * (m - 1)) / 2)
     w = zeros(p)
-    k=1
-    for i=1:m
-        for j=(i+1):m
-            w[k] = u[i]*v[j] - u[j]v[i]
-            k = k+1
+    k = 1
+    for i = 1:m
+        for j = (i+1):m
+            w[k] = u[i] * v[j] - u[j]v[i]
+            k = k + 1
         end
     end
     return w
 end
 
-function findcirc(s1,s2)
+function findcirc(s1, s2)
     vn = s1[1:end-1] - s2[1:end-1]
-    vn = vn/norm(vn)
+    vn = vn / norm(vn)
     r = norm(s1[1:end-1] - s2[1:end-1])
     r1 = s1[end]
     r2 = s2[end]
-    t = (r2^2-r1^2-r^2)/(2*r^2)
-    rc = sqrt(r1^2 - (r1^2 - r2^2 + r^2)^2/(4*r^2))
+    t = (r2^2 - r1^2 - r^2) / (2 * r^2)
+    rc = sqrt(r1^2 - (r1^2 - r2^2 + r^2)^2 / (4 * r^2))
     #rc = r^2*t + t*(r1^2 -r2^2 + r^2) + 
-    d = 0.5*(r1^2 - r2^2 + r^2) + dot(s1[1:end-1], s2[1:end-1] - s1[1:end-1])
-    cc = s1[1:3] - t*(s2[1:3]-s1[1:3])
-    sol = [vn;d;cc;rc]
+    d = 0.5 * (r1^2 - r2^2 + r^2) + dot(s1[1:end-1], s2[1:end-1] - s1[1:end-1])
+    cc = s1[1:3] - t * (s2[1:3] - s1[1:3])
+    sol = [vn; d; cc; rc]
     return sol
 end
 
@@ -1003,7 +1003,7 @@ function geradorcircle()
     r = float(rand(5:170, 1000))
     npts = float(rand(10:2000, 401))
     for i = 1:400
-        build_problem("circle3d", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], v1[i], v2[i], v3[i], -v2[i], v1[i],0.0 ,npts[i], 0])
+        build_problem("circle3d", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], v1[i], v2[i], v3[i], -v2[i], v1[i], 0.0, npts[i], 0])
     end
 end
 
