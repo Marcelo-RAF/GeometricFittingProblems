@@ -121,20 +121,20 @@ function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esfera
 end
 
 function simetrica(D)
-    (m,n) = size(D)
-    H = zeros(m,m)
-    for i=1:m
-      for j=i:m
-        H[i,j] = dot(D[i,:], D[j,:])
-      end
+    (m, n) = size(D)
+    H = zeros(m, m)
+    for i = 1:m
+        for j = i:m
+            H[i, j] = dot(D[i, :], D[j, :])
+        end
     end
-    for j=1:m-1
-        for i=j+1:m
-            H[i,j] = H[j,i]
+    for j = 1:m-1
+        for i = j+1:m
+            H[i, j] = H[j, i]
         end
     end
     return H
-  end
+end
 
 function hildebran(data, method::String, ε=1.0e-5)
     (N, n) = size(data)
@@ -313,7 +313,7 @@ function solve(prob::FitProbType, method::String)
         return LOVOCGAHypersphere(prob.data, prob.nout, initθ)
     end
     if method == "LOVO-HildSphere"
-        initθ = hildebran(prob.data,"eigenvector")
+        initθ = hildebran(prob.data, "eigenvector")
         return LOVOHildSphere(prob.data, prob.nout, initθ)
     end
 end
@@ -1006,20 +1006,6 @@ function externo(u, v)
     return w
 end
 
-function findcirc(s1, s2)
-    vn = s1[1:end-1] - s2[1:end-1]
-    vn = vn / norm(vn)
-    r = norm(s1[1:end-1] - s2[1:end-1])
-    r1 = s1[end]
-    r2 = s2[end]
-    t = (r2^2 - r1^2 - r^2) / (2 * r^2)
-    rc = sqrt(r1^2 - (r1^2 - r2^2 + r^2)^2 / (4 * r^2))
-    #rc = r^2*t + t*(r1^2 -r2^2 + r^2) + 
-    d = 0.5 * (r1^2 - r2^2 + r^2) + dot(s1[1:end-1], s2[1:end-1] - s1[1:end-1])
-    cc = s1[1:3] - t * (s2[1:3] - s1[1:3])
-    sol = [vn; d; cc; rc]
-    return sol
-end
 
 function geradoraut(h)
     n = 1000  # tamanho da lista desejada
@@ -1032,7 +1018,7 @@ function geradoraut(h)
     npts = float(rand(10:2000, 401))
     nout = float([floor(Int, h * x) for x in npts])
     for i = 1:100
-        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i],c3[i] ,r[i], npts[i], nout[i]])
+        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], npts[i], nout[i]])
     end
 end
 
