@@ -2,7 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
 
-export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, LMcircle, LMClass, LMClassCirc, geradoraut
+export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, LMcircle, LMClass, LMClassCirc, plot_plane
 
 import Base.show
 
@@ -101,6 +101,15 @@ function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esfera
         end
         xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
         center = xnorm[1:end-2]
+        #s1 = F.vectors[:, 2]
+        #s2 = F.vectors[:, 3]
+        #xnorm1 = (1.0 / s1[4] * s1)
+        #center1 = xnorm1[1:end-2]
+        #xnorm2 = (1.0 / s2[4] * s2)
+        #center2 = xnorm2[1:end-2]
+        #sol1 = push!(center1, √(norm(center1, 2)^2 - 2.0 * xnorm1[end]))
+        #sol2 = push!(center2, √(norm(center2, 2)^2 - 2.0 * xnorm2[end]))
+        display(F)
         return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
     elseif method == "nullspace"
         P[end, :] = zeros(n + 2)
@@ -111,12 +120,28 @@ function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esfera
     end
 end
 
+function simetrica(D)
+    (m,n) = size(D)
+    H = zeros(m,m)
+    for i=1:m
+      for j=i:m
+        H[i,j] = dot(D[i,:], D[j,:])
+      end
+    end
+    for j=1:m-1
+        for i=j+1:m
+            H[i,j] = H[j,i]
+        end
+    end
+    return H
+  end
+
 function hildebran(data, method::String, ε=1.0e-5)
     (N, n) = size(data)
     D = [data'; -ones(1, N)]
     v = [-0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
     D = [D; v']
-    Dd = D * D'
+    Dd = simetrica(D)
     #println(F.values)
     if method == "eigenvector"
         F = eigen(Dd)
@@ -231,26 +256,40 @@ end
 
 
 
-function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-6)
+function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-5)
     ordres = sort_sphere_res(data, θ, nout)
     k = 1
     antres = 0.0
     while abs(ordres[2] - antres) > ε
         antres = ordres[2]
-        θ = CGAHypersphere(ordres[1])
+        θ = CGAHypersphere(ordres[1], "eigenvector")
         ordres = sort_sphere_res(data, θ, nout)
         k = k + 1
     end
     return θ, k
 end
 
-function LOVOCGAHyperplane(data, nout, θ, ε=1.0e-6)
+function LOVOHildSphere(data, nout, θ, ε=1.0e-5)
+    ordres = sort_sphere_res(data, θ, nout)
+    k = 1
+    antres = 0.0
+    while abs(ordres[2] - antres) > ε
+        antres = ordres[2]
+        θ = hildebran(ordres[1], "eigenvector")
+        ordres = sort_sphere_res(data, θ, nout)
+        k = k + 1
+    end
+    return θ, k
+end
+
+
+function LOVOCGAHyperplane(data, nout, θ, ε=1.0e-5)
     ordres = sort_plane_res(data, θ, nout)
     k = 1
     antres = 0.0
     while abs(ordres[2] - antres) > ε
         antres = ordres[2]
-        θ = CGAHypersphere(ordres[1])
+        θ = CGAHypersphere(ordres[1], "eigenvector")
         ordres = sort_plane_res(data, θ, nout)
         k = k + 1
     end
@@ -259,7 +298,7 @@ end
 
 
 
-function solve(prob::FitProbType, method::String, initθ=CGAHypersphere(prob.data))
+function solve(prob::FitProbType, method::String)
     if method == "LMsphere"
         return LMsphere(prob.data, initθ)
     end
@@ -270,9 +309,16 @@ function solve(prob::FitProbType, method::String, initθ=CGAHypersphere(prob.dat
         return CGAHypersphere(prob.data)
     end
     if method == "LOVO-CGA-Hypersphere"
+        initθ = CGAHypersphere(prob.data, "eigenvector")
         return LOVOCGAHypersphere(prob.data, prob.nout, initθ)
     end
+    if method == "LOVO-HildSphere"
+        initθ = hildebran(prob.data,"eigenvector")
+        return LOVOHildSphere(prob.data, prob.nout, initθ)
+    end
 end
+
+
 
 
 
@@ -322,7 +368,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(u)]; "description :" [[p0, p0]]]
+        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" "description :" [[p0, p0]]]
 
         open("line_$(u[1])_$(u[2])_$(u[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -361,7 +407,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
-        r = 3.0
+        r = 5.0
         for k = 1:nout
             x[iout[k]] = x[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
@@ -416,11 +462,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         for k = 1:nout
             w[:, iout[k]] = w[:, iout[k]] + [rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])]
         end
-        G = randn(3, npts)
+        #G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i] + G[1, i]
-            y[i] = w[2, i] + G[2, i]
-            z[i] = w[3, i] + G[3, i]
+            x[i] = w[1, i] #+ G[1, i]
+            y[i] = w[2, i] #+ G[2, i]
+            z[i] = w[3, i] #+ G[3, i]
         end
         FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[u, v]]]
 
@@ -486,9 +532,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         #  h = Int(npts/2) + 1
         # end
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -500,10 +546,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
-        dx = randn() * 0.1 * r
-        dy = randn() * 0.1 * r
-        dz = randn() * 0.1 * r
         for k = 1:nout
+            dx = randn() * 0.15 * r
+            dy = randn() * 0.15 * r
+            dz = randn() * 0.15 * r
             x[iout[k]] = x[iout[k]] + dx #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;]) 
             y[iout[k]] = y[iout[k]] + dy #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
             z[iout[k]] = z[iout[k]] + dz #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
@@ -573,6 +619,7 @@ function jplane(xi, data)
     end
     return J
 end
+
 
 
 function LMClass(prob, xk, ε=1.0e-5, MAXIT=100)
@@ -817,7 +864,7 @@ function fcircle(x, P)
         end
         r[i] = (r[i] - x[7]^2)^2 + a[i]
     end
-    return sum(r)
+    return r
 end
 
 
@@ -923,6 +970,7 @@ function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-6)
 end
 
 
+
 function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-4), limit=100)
     stop_criteria = 1000.0
     F = lu(A)
@@ -983,10 +1031,13 @@ function geradoraut(h)
     r = float(rand(5:170, 1000))
     npts = float(rand(10:2000, 401))
     nout = float([floor(Int, h * x) for x in npts])
-    for i = 1:400
-        build_problem("sphere2D", [1.0, 1.0], [c1[i], c2[i], r[i], npts[i], nout[i]])
+    for i = 1:100
+        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i],c3[i] ,r[i], npts[i], nout[i]])
     end
 end
+
+
+
 
 function geradorcircle()
     n = 1000  # tamanho da lista desejada
@@ -1007,9 +1058,8 @@ function geradorcircle()
     end
 end
 
-
 function visualize(prob, a)
-    pyplot() #beckendpyplot
+    pyplot()#beckendpyplot
     plt = plot()
     if prob.name == "sphere2D" || prob.name == "\tsphere2D"
         plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
@@ -1023,7 +1073,7 @@ function visualize(prob, a)
         display(plt)
     end
     if prob.name == "sphere3D" || prob.name == "\tsphere3D"
-        plt = plot()
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal)#, lab="pontos do problema")
         n = 20
         u = range(0, stop=2 * pi, length=n)
         v = range(0, stop=pi, length=n)
@@ -1047,11 +1097,11 @@ function visualize(prob, a)
         xs = h4 .+ a[4] * cos.(u) * sin.(v)'
         ys = h5 .+ a[4] * sin.(u) * sin.(v)'
         zs = h6 .+ a[4] * cos.(v)'
-        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:green, label="solução do algoritmo")
-        wireframe!(x, y, z, aspect_ratio=:equal, color=:red, label="solução perfeita")
+        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:blue, label="CGA")
+        wireframe!(x, y, z, aspect_ratio=:equal, color=:red, label="LOVO-CGA")
         return plt
     end
-    if prob.name == "circle3d" || prob.name == "\tcircle3d"
+    if prob.name == "circles3d" || prob.name == "\tcircsle3d"
         vn = [a[1], a[2], a[3]]
         u = [-a[2], a[1], 0.0]
         v = [0.0, a[3], -a[2]]
@@ -1072,8 +1122,52 @@ function visualize(prob, a)
         plot!(plt, x, y, z, camera=(20, 50), color=:red, lab="solução do algoritmo") #usar camera=(100,40) pro nout=20
         display(plt)
     end
+
+
 end
 
+
+function plot_plane(prob, m::Vector{Float64}, d::Float64, m2::Vector{Float64}, d2::Float64)
+    pyplot()#beckendpyplot
+    plt = plot()
+    plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal)
+    u1 = [m[3], 0.0, m[1]]
+    u2 = [m[1], m[3], 0.0]
+    v1 = [-m2[3], 0.0, m2[1]]
+    v2 = [m2[2], -m2[1], 0.0]
+    v1 = v1 / norm(v1)
+    v2 = v2 - (dot(v2, v1) / norm(v1)^2) * v1
+    v2 = v2 / norm(v2)
+    p0 = [d, d, d]
+    p1 = [d2, d2, d2]
+    #u = u / norm(u)
+    #h = v - (dot(v, u) / norm(u)^2) * u
+    #v = h / norm(h)
+    # Cria um meshgrid para o plano
+    x = range(-100, stop=100, length=10)
+    y = range(-100, stop=100, length=10)
+
+
+    xx, yy = [xi for xi in x, yi in y], [yi for xi in x, yi in y]
+
+
+
+
+
+    # Calcula a equação do plano
+    #z = (-m[1] .* xx .- m[2] .* yy .- d) / m[3]
+    xs = p0[1] .+ xx .* u1[1] + yy .* u2[1]
+    ys = p0[2] .+ xx .* u1[2] + yy .* u2[2]
+    zs = p0[3] .+ xx .* u1[3] + yy .* u2[3]
+    xn = p1[1] .+ xx .* v1[1] + yy .* v2[1]
+    yn = p1[2] .+ xx .* v1[2] + yy .* v2[2]
+    zn = p1[3] .+ xx .* v1[3] + yy .* v2[3]
+
+
+    # Plota o plano
+    wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:blue, label="CGA")
+    wireframe!(xn, yn, zn, aspect_ratio=:equal, color=:red, label="CGdA")
+end
 
 
 

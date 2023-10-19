@@ -139,7 +139,7 @@ end
 
 function calcgradresid(file::String)
   set_problem = String.(readdlm(file))
-  csv_file = open("hild_autovalor.csv", "w")
+  csv_file = open("hild_autovalornovo.csv", "w")
   #csv_file_benchmark = open("benchCGA_AV.csv", "w")
   df = DataFrame()
   k = 0
@@ -154,7 +154,7 @@ function calcgradresid(file::String)
       ch2 = residgeometric(s, prob.data)
       ch3 = gradalgebric(s, prob.data)
       ch4 = gradgeometric(s, prob.data)
-      a = @benchmark hildebran($prob.data,$"eigenvector") samples = 5000 #usa
+      a = @benchmark hildebran($prob.data, $"eigenvector") seconds = 40 samples = 5000 #usa
       k = k + 1
       println(k)
       row = DataFrame([(probname, prob.npts, s, ch1, ch2, ch3, ch4, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
@@ -185,12 +185,12 @@ function residcircle(file::String)
     log_file = open("log.txt", "w")
     prob = load_problem(probname)
     s = CGAHypersphere(prob.data)
-    sol = circleag(s[1],s[2])
-    resid = fcircle(sol,prob.data)
+    sol = circleag(s[1], s[2])
+    resid = fcircle(sol, prob.data)
 
     solved = false
     try
-      resid = fcircle(sol,prob.data)
+      resid = fcircle(sol, prob.data)
       #a = @benchmark solve($prob, $method, $x0) samples = 5000 #usa
       k = k + 1
       println(k)
