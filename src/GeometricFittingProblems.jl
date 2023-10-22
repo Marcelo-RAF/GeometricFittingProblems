@@ -71,8 +71,6 @@ function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esfera
     D = [data'; ones(1, N)]
     v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
     D = [D; v']
-    #println("First D")
-    #display(D)
     J = copy(D')
     H = -copy(J[:, n+1])
     J[:, n+1] = -J[:, n+2]
@@ -99,24 +97,17 @@ function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esfera
         if valmin < -ε
             error("P does not have postive eigen value!")
         end
-        xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
-        center = xnorm[1:end-2]
-        #s1 = F.vectors[:, 2]
-        #s2 = F.vectors[:, 3]
-        #xnorm1 = (1.0 / s1[4] * s1)
-        #center1 = xnorm1[1:end-2]
-        #xnorm2 = (1.0 / s2[4] * s2)
-        #center2 = xnorm2[1:end-2]
-        #sol1 = push!(center1, √(norm(center1, 2)^2 - 2.0 * xnorm1[end]))
-        #sol2 = push!(center2, √(norm(center2, 2)^2 - 2.0 * xnorm2[end]))
+        #xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
+        #center = xnorm[1:end-2]
         display(F)
-        return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
+        return F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
     elseif method == "nullspace"
         P[end, :] = zeros(n + 2)
         np = nullspace(P)
-        npnorm = np / np[end-1]
-        centernp = npnorm[1:end-2]
-        push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))
+        #npnorm = np / np[end-1]
+        #centernp = npnorm[1:end-2]
+        #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))
+        return np
     end
 end
 
@@ -138,11 +129,9 @@ end
 
 function hildebran(data, method::String, ε=1.0e-5)
     (N, n) = size(data)
-    D = [data'; -ones(1, N)]
-    v = [-0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
-    D = [D; v']
+    v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
+    D = [data'; v'; -ones(1, N)]
     Dd = simetrica(D)
-    #println(F.values)
     if method == "eigenvector"
         F = eigen(Dd)
         indmin = 1
@@ -158,36 +147,40 @@ function hildebran(data, method::String, ε=1.0e-5)
         if valmin < -ε
             error("P does not have postive eigen value!")
         end
-        xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
+        xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
         center = xnorm[1:end-2]
-        return push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
+        #display(F)
+        return F.vectors[:,indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
     elseif method == "nullspace"
-        Dd[end, :] = zeros(n + 2)
+        Dd[4, :] = zeros(n + 2)
         np = nullspace(Dd)
-        npnorm = np / np[end]
-        centernp = npnorm[1:end-2]
-        return push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end-1]))
+        #npnew = [np[1], np[2], np[3], np[5], np[4]]
+        #npnorm = npnew / npnew[end]
+        #centernp = npnorm[1:end-2]
+        return np #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end-1]))
     end
 end
 
-function sort_plane_res(P, x, nout)
-    n = length(P[:, 1])
-    m = length(P[1, :])
-    v = zeros(n)
-    println(x)
-    for i = 1:n
-        for j = 1:m
-            v[i] = v[i] + P[i, j] * x[j]
+
+function conformalsort(P, x, nout)
+    (m, n) = size(P)
+    h = zeros(m)
+    D = [P'; ones(1, m)]
+    v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:m]
+    D = [D; v']'
+    for i = 1:m
+        for j = 1:n
+            h[i] = h[i] + D[i, j] * x[j]
         end
-        v[i] = (v[i] - x[end])^2
+        h[i] = (h[i] - x[end] - x[end-1] * v[i])^2
     end
-    indtrust = [1:n;]
-    for i = 1:n-nout+1
-        for j = i+1:n
-            if v[i] > v[j]
-                aux = v[j]
-                v[j] = v[i]
-                v[i] = aux
+    indtrust = [1:m;]
+    for i = 1:m-nout+1
+        for j = i+1:m
+            if h[i] > h[j]
+                aux = h[j]
+                h[j] = h[i]
+                h[i] = aux
 
                 aux2 = indtrust[j]
                 indtrust[j] = indtrust[i]
@@ -196,36 +189,9 @@ function sort_plane_res(P, x, nout)
         end
     end
     #    println(indtrust[n-nout+1:n])
-    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
+    return P[indtrust[1:m-nout], :], sum(h[1:m-nout])
 end
 
-function sort_sphere_res(P, x, nout)
-    n = length(P[:, 1])
-    m = length(P[1, :])
-    v = zeros(n)
-    for i = 1:n
-        for j = 1:m
-            v[i] = v[i] + (P[i, j] - x[j])^2
-        end
-        v[i] = abs(v[i] - x[end]^2)
-    end
-    indtrust = [1:n;]
-    for i = 1:n-nout+1
-        for j = i+1:n
-            if v[i] > v[j]
-                aux = v[j]
-                v[j] = v[i]
-                v[i] = aux
-
-                aux2 = indtrust[j]
-                indtrust[j] = indtrust[i]
-                indtrust[i] = aux2
-            end
-        end
-    end
-    #    println(indtrust[n-nout+1:n])
-    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
-end
 
 function LMCircsq(data, nout, θ, ε=1.0e-6)
     ordres = sort_circle_res(data, θ, nout)
@@ -255,45 +221,22 @@ function LMSORT(data, nout, θ, ε=1.0e-8)
 end
 
 
-
-function LOVOCGAHypersphere(data, nout, θ, ε=1.0e-5)
-    ordres = sort_sphere_res(data, θ, nout)
+function LOVOConformal(data, nout, θ, nome,ε=1.0e-5)
+    ordres = conformalsort(data, θ, nout)
     k = 1
     antres = 0.0
     while abs(ordres[2] - antres) > ε
         antres = ordres[2]
-        θ = CGAHypersphere(ordres[1], "eigenvector")
-        ordres = sort_sphere_res(data, θ, nout)
+        if nome == "algebraic"
+            θ = hildebran(ordres[1], "eigenvector")
+        end
+        if nome == "geometric"
+            θ = CGAHypersphere(ordres[1], "eigenvector")
+        end
+        ordres = conformalsort(data, θ, nout)
         k = k + 1
     end
     return θ, k
-end
-
-function LOVOHildSphere(data, nout, θ, ε=1.0e-5)
-    ordres = sort_sphere_res(data, θ, nout)
-    k = 1
-    antres = 0.0
-    while abs(ordres[2] - antres) > ε
-        antres = ordres[2]
-        θ = hildebran(ordres[1], "eigenvector")
-        ordres = sort_sphere_res(data, θ, nout)
-        k = k + 1
-    end
-    return θ, k
-end
-
-
-function LOVOCGAHyperplane(data, nout, θ, ε=1.0e-5)
-    ordres = sort_plane_res(data, θ, nout)
-    k = 1
-    antres = 0.0
-    while abs(ordres[2] - antres) > ε
-        antres = ordres[2]
-        θ = CGAHypersphere(ordres[1], "eigenvector")
-        ordres = sort_plane_res(data, θ, nout)
-        k = k + 1
-    end
-    return θ#, k
 end
 
 
@@ -308,13 +251,13 @@ function solve(prob::FitProbType, method::String)
     if method == "CGA-Hypersphere"
         return CGAHypersphere(prob.data)
     end
-    if method == "LOVO-CGA-Hypersphere"
+    if method == "LOVO-CGA-Geometric"
         initθ = CGAHypersphere(prob.data, "eigenvector")
-        return LOVOCGAHypersphere(prob.data, prob.nout, initθ)
+        return LOVOConformal(prob.data, prob.nout, initθ, "geometric")
     end
-    if method == "LOVO-HildSphere"
+    if method == "LOVO-CGA-Algebraic"
         initθ = hildebran(prob.data, "eigenvector")
-        return LOVOHildSphere(prob.data, prob.nout, initθ)
+        return LOVOConformal(prob.data, prob.nout, initθ, "algebraic")
     end
 end
 
@@ -923,6 +866,64 @@ function LMcircle(data, x0, ε=1.0e-6, λ_min=1e-4)
     return x
 end
 
+function sort_sphere_res(P, x, nout)
+    n = length(P[:, 1])
+    m = length(P[1, :])
+    v = zeros(n)
+    for i = 1:n
+        for j = 1:m
+            v[i] = v[i] + (P[i, j] - x[j])^2
+        end
+        v[i] = abs(v[i] - x[end]^2)
+    end
+    indtrust = [1:n;]
+    for i = 1:n-nout+1
+        for j = i+1:n
+            if v[i] > v[j]
+                aux = v[j]
+                v[j] = v[i]
+                v[i] = aux
+
+                aux2 = indtrust[j]
+                indtrust[j] = indtrust[i]
+                indtrust[i] = aux2
+            end
+        end
+    end
+    #    println(indtrust[n-nout+1:n])
+    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
+end
+
+function sort_plane_res(P, x, nout)
+    n = length(P[:, 1])
+    m = length(P[1, :])
+    v = zeros(n)
+    println(x)
+    for i = 1:n
+        for j = 1:m
+            v[i] = v[i] + P[i, j] * x[j]
+        end
+        v[i] = (v[i] - x[end])^2
+    end
+    indtrust = [1:n;]
+    for i = 1:n-nout+1
+        for j = i+1:n
+            if v[i] > v[j]
+                aux = v[j]
+                v[j] = v[i]
+                v[i] = aux
+
+                aux2 = indtrust[j]
+                indtrust[j] = indtrust[i]
+                indtrust[i] = aux2
+            end
+        end
+    end
+    #    println(indtrust[n-nout+1:n])
+    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
+end
+
+
 function sort_circle_res(P, x, nout)
     N = length(P[:, 1])
     M = length(P[1, :])
@@ -971,27 +972,6 @@ end
 
 
 
-function inverse_power_method(A::Array{Float64}; q0=ones(size(A)[1]), ε=10.0^(-4), limit=100)
-    stop_criteria = 1000.0
-    F = lu(A)
-    B = inv(A)
-    k = 1
-    s = 0.0
-    q = zeros(length(q0))
-    while stop_criteria > ε && k < limit
-        s = norm(q0, Inf)
-        q = B * (q0 / s)
-        stop_criteria = norm(abs.(q) - abs.(q0), Inf)
-        q0 = copy(q)
-        k = k + 1
-    end
-    if k == limit
-        error("iteration limit of inverse power method was reached")
-    else
-        return q, 1.0 / s
-    end
-end
-
 function externo(u, v)
     m = length(u)
     p = Int((m * (m - 1)) / 2)
@@ -1004,44 +984,6 @@ function externo(u, v)
         end
     end
     return w
-end
-
-
-function geradoraut(h)
-    n = 1000  # tamanho da lista desejada
-    a = -120  # limite inferior do intervalo
-    b = 120  # limite superior do intervalo
-    c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    r = float(rand(5:170, 1000))
-    npts = float(rand(10:2000, 401))
-    nout = float([floor(Int, h * x) for x in npts])
-    for i = 1:100
-        build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], npts[i], nout[i]])
-    end
-end
-
-
-
-
-function geradorcircle()
-    n = 1000  # tamanho da lista desejada
-    a = -120  # limite inferior do intervalo
-    b = 120  # limite superior do intervalo
-    x = -50
-    y = 50
-    c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
-    v1 = round.(float(rand(n) .* (y - x) .+ x), digits=1)
-    v2 = round.(float(rand(n) .* (y - x) .+ x), digits=1)
-    v3 = round.(float(rand(n) .* (y - x) .+ x), digits=1)
-    r = float(rand(5:170, 1000))
-    npts = float(rand(10:2000, 401))
-    for i = 1:400
-        build_problem("circle3d", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], v1[i], v2[i], v3[i], -v2[i], v1[i], 0.0, npts[i], 0])
-    end
 end
 
 function visualize(prob, a)

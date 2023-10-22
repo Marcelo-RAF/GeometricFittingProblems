@@ -1,107 +1,6 @@
 using BenchmarkTools, CSV, DataFrames
 
-function benchLM(file::String, method::String, pinit=[0.0, 0.0, 1.0])
-  set_problem = String.(readdlm(file))
-  csv_file = open("LMSORT_20.csv", "w")
-  csv_file_benchmark = open("benchLMSORT_20.csv", "w")
-  df = DataFrame()
-  k = 0
-  benchmark_df = DataFrame()
-  for probname ∈ set_problem
-    log_file = open("logLMSORT_20.txt", "w")
-    prob = load_problem(probname)
-    #pinit = CGAHypersphere(prob.data)
-    x0 = LMsphere(prob.data, pinit)
-    solved = false
-    try
-      s = solve(prob, method, x0)
-      a = @benchmark solve($prob, $method, $x0) samples = 5000 #usa
-      k = k + 1
-      println(k)
-      row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
-      df = vcat(df, row)
-      benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
-      benchmark_df = vcat(benchmark_df, benchmark_row) #usa
-      CSV.write(csv_file, df)
-      CSV.write(csv_file_benchmark, benchmark_df)
-    catch e
-      println("erro: ", e)
-      solved = false
-      write(log_file, "$probname\n")
-    end
-    close(log_file)
-  end
-  close(csv_file)
-  close(csv_file_benchmark)
-end
 
-function benchCGA(file::String, method::String)
-  set_problem = String.(readdlm(file))
-  csv_file = open("autovalor.csv", "w")
-  #csv_file_benchmark = open("benchCGA_20.csv", "w")
-  df = DataFrame()
-  k = 0
-  #benchmark_df = DataFrame()
-  for probname ∈ set_problem
-    log_file = open("logcga.txt", "w")
-    prob = load_problem(probname)
-    #pinit = CGAHypersphere(prob.data)
-    solved = false
-    try
-      s = solve(prob, method)#, pinit)
-      #a = @benchmark solve($prob, $method, $pinit) samples = 5000 #usa
-      k = k + 1
-      println(k)
-      ch = fsphere(s, prob.data)
-      row = DataFrame([(probname, prob.npts, prob.solution, ch, s)]) #depois do prob.npts voltar o prob.nout
-      df = vcat(df, row)
-      #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
-      #benchmark_df = vcat(benchmark_df, benchmark_row) #usa
-      CSV.write(csv_file, df)
-      #CSV.write(csv_file_benchmark, benchmark_df)
-    catch e
-      println("erro: ", e)
-      solved = false
-      write(log_file, "$probname\n")
-    end
-    close(log_file)
-  end
-  close(csv_file)
-  #close(csv_file_benchmark)
-end
-
-function testeclass(file::String, pinit=[0.0, 0.0, 1.0])
-  set_problem = String.(readdlm(file))
-  csv_file = open("LMCLASS20.csv", "w")
-  csv_file_benchmark = open("benchLMCLASS20.csv", "w")
-  df = DataFrame()
-  benchmark_df = DataFrame()
-  k = 0
-  for probname ∈ set_problem
-    log_file = open("logLMCLASS_20.txt", "w")
-    prob = load_problem(probname)
-    solved = false
-    try
-      s = LMClass(prob, pinit)
-      a = @benchmark LMClass($prob, $pinit) samples = 5000
-      k = k + 1
-      println(k)
-      row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2])])
-      df = vcat(df, row)
-      benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
-      benchmark_df = vcat(benchmark_df, benchmark_row) #usa
-      CSV.write(csv_file, df)
-      CSV.write(csv_file_benchmark, benchmark_df)
-    catch e
-      println("erro: ", e)
-      solved = false
-      write(log_file, "$probname\n")
-    end
-    close(log_file)
-  end
-  close(csv_file)
-  close(csv_file_benchmark)
-end
 
 function testeLM(file::String, method::String, pinit=[[0, 0, 0.0, 1.0], 0.0])
   set_problem = String.(readdlm(file))
@@ -139,25 +38,25 @@ end
 
 function calcgradresid(file::String)
   set_problem = String.(readdlm(file))
-  csv_file = open("hild_autovalornovo.csv", "w")
-  #csv_file_benchmark = open("benchCGA_AV.csv", "w")
+  csv_file = open("hildebranautovalor.csv", "w")
+  #csv_file_benchmark = open("benchLMSORT_20.csv", "w")
   df = DataFrame()
   k = 0
   #benchmark_df = DataFrame()
   for probname ∈ set_problem
     log_file = open("log.txt", "w")
     prob = load_problem(probname)
-    s = hildebran(prob.data, "eigenvector")
+    s = hildebran(prob.data)
     solved = false
     try
       ch1 = residalgebric(s, prob.data)
       ch2 = residgeometric(s, prob.data)
       ch3 = gradalgebric(s, prob.data)
       ch4 = gradgeometric(s, prob.data)
-      a = @benchmark hildebran($prob.data, $"eigenvector") seconds = 40 samples = 5000 #usa
+      #a = @benchmark solve($prob, $method, $x0) samples = 5000 #usa
       k = k + 1
       println(k)
-      row = DataFrame([(probname, prob.npts, s, ch1, ch2, ch3, ch4, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+      row = DataFrame([(probname, prob.npts, s, ch1, ch2, ch3, ch4)])
       df = vcat(df, row)
       #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
       #benchmark_df = vcat(benchmark_df, benchmark_row) #usa
@@ -174,9 +73,9 @@ function calcgradresid(file::String)
   #close(csv_file_benchmark)
 end
 
-function residcircle(file::String)
+function benchcircle(file::String)
   set_problem = String.(readdlm(file))
-  csv_file = open("CGA_nullspace.csv", "w")
+  csv_file = open("hildnullspace.csv", "w")
   #csv_file_benchmark = open("benchLMSORT_20.csv", "w")
   df = DataFrame()
   k = 0
@@ -184,17 +83,83 @@ function residcircle(file::String)
   for probname ∈ set_problem
     log_file = open("log.txt", "w")
     prob = load_problem(probname)
-    s = CGAHypersphere(prob.data)
-    sol = circleag(s[1], s[2])
-    resid = fcircle(sol, prob.data)
-
+    s = hildebrancircle(prob.data, "nullspace")
     solved = false
     try
-      resid = fcircle(sol, prob.data)
-      #a = @benchmark solve($prob, $method, $x0) samples = 5000 #usa
+      ch1 = residcircle(s, prob.data)
+      a = @benchmark hildebrancircle($prob.data, $"nullspace") samples = 5000 seconds = 30#usa
       k = k + 1
       println(k)
-      row = DataFrame([(probname, prob.npts, sol, resid)])
+      row = DataFrame([(probname, prob.npts, s, ch1, median(a.times) / 1e9)])
+      df = vcat(df, row)
+      #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
+      #benchmark_df = vcat(benchmark_df, benchmark_row) #usa
+      CSV.write(csv_file, df)
+      #CSV.write(csv_file_benchmark, benchmark_df)
+    catch e
+      println("erro: ", e)
+      solved = false
+      write(log_file, "$probname\n")
+    end
+    close(log_file)
+  end
+  close(csv_file)
+  #close(csv_file_benchmark)
+end
+
+function withoutres(file::String)
+  set_problem = String.(readdlm(file))
+  csv_file = open("hildebran.csv", "w")
+  #csv_file_benchmark = open("benchLMSORT_20.csv", "w")
+  df = DataFrame()
+  k = 0
+  #benchmark_df = DataFrame()
+  for probname ∈ set_problem
+    log_file = open("log.txt", "w")
+    prob = load_problem(probname)
+    s = solve(prob, "LOVO-HildSphere")
+    h = norm(s[1] - prob.solution)
+    solved = false
+    try
+      a = @benchmark solve($prob, $"LOVO-HildSphere")# samples = 5000 seconds = 20 #usa
+      k = k + 1
+      println(k)
+      row = DataFrame([(probname, prob.npts, s[1], s[2], h, median(a.times) / 1e9)])
+      df = vcat(df, row)
+      #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
+      #benchmark_df = vcat(benchmark_df, benchmark_row) #usa
+      CSV.write(csv_file, df)
+      #CSV.write(csv_file_benchmark, benchmark_df)
+    catch e
+      println("erro: ", e)
+      solved = false
+      write(log_file, "$probname\n")
+    end
+    close(log_file)
+  end
+  close(csv_file)
+  #close(csv_file_benchmark)
+end
+
+function withres(file::String)
+  set_problem = String.(readdlm(file))
+  csv_file = open("hildebran.csv", "w")
+  #csv_file_benchmark = open("benchLMSORT_20.csv", "w")
+  df = DataFrame()
+  k = 0
+  #benchmark_df = DataFrame()
+  for probname ∈ set_problem
+    log_file = open("log.txt", "w")
+    prob = load_problem(probname)
+    s = solve(prob, "LOVO-HildSphere")
+    solved = false
+    try
+      ch1 = residalgebric(s[1], prob.data)
+      ch2 = residgeometric(s[1], prob.data)
+      a = @benchmark solve($prob, $"LOVO-HildSphere")# samples = 5000 seconds = 20 #usa
+      k = k + 1
+      println(k)
+      row = DataFrame([(probname, prob.npts, s[1], s[2], ch1, ch2, median(a.times) / 1e9)])
       df = vcat(df, row)
       #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)]) #usa
       #benchmark_df = vcat(benchmark_df, benchmark_row) #usa
