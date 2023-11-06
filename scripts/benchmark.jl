@@ -1,30 +1,39 @@
 using BenchmarkTools, CSV, DataFrames
 
+function difer(u, v)
+  h = 0.0
+  for j = 1:length(u)-1
+    h = h + sqrt((u[j] - v[j])^2)
+  end
+  h = h + sqrt((u[end] - abs(v[end]))^2)
+  return h
+end
 
-
-function testeLM(file::String, method::String, pinit=[[0, 0, 0.0, 1.0], 0.0])
+function testeLM(file::String, method::String)
   set_problem = String.(readdlm(file))
-  csv_file = open("sollm3_40.csv", "w")
-  csv_file_benchmark = open("benchlm3_40.csv", "w")
+  csv_file = open("persistentLM2.csv", "w")
+  #csv_file_benchmark = open("benchlm3_40.csv", "w")
   df = DataFrame()
   k = 0
-  benchmark_df = DataFrame()
+  #benchmark_df = DataFrame()
   for probname ∈ set_problem
     log_file = open("loglm4.txt", "w")
     prob = load_problem(probname)
     solved = false
     try
-      s = solve(prob, method, pinit)
-      a = @benchmark solve($prob, $method, $pinit) samples = 5000
+      s = solve(prob, method)
+      a = @benchmark solve($prob, $method) samples = 100 seconds = 60
+      #ndif = norm(prob.solution - s[1])
+      ndif = difer(prob.solution, s[1])
       k = k + 1
       println(k)
-      row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3])])
+      row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3], ndif, median(a.times) / 1e9)])
       df = vcat(df, row)
-      benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
-      benchmark_df = vcat(benchmark_df, benchmark_row)
+      #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+      #benchmark_df = vcat(benchmark_df, benchmark_row)
       #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
       CSV.write(csv_file, df)
-      CSV.write(csv_file_benchmark, benchmark_df)
+      #CSV.write(csv_file_benchmark, benchmark_df)
     catch e
       println("erro: ", e)
       solved = false
@@ -33,8 +42,45 @@ function testeLM(file::String, method::String, pinit=[[0, 0, 0.0, 1.0], 0.0])
     close(log_file)
   end
   close(csv_file)
-  close(csv_file_benchmark)
+  #close(csv_file_benchmark)
 end
+
+function testeLMClass(file::String)
+  set_problem = String.(readdlm(file))
+  csv_file = open("LMClass2.csv", "w")
+  #csv_file_benchmark = open("benchlm3_40.csv", "w")
+  df = DataFrame()
+  k = 0
+  #benchmark_df = DataFrame()
+  for probname ∈ set_problem
+    log_file = open("loglm4.txt", "w")
+    prob = load_problem(probname)
+    solved = false
+    try
+      s = LMClass(prob, [0.0, 0.0, 0.0, 1.0])
+      a = @benchmark LMClass($prob, $[0.0, 0.0, 0.0, 1.0]) samples = 100 seconds = 60
+      ndif = difer(prob.solution, s[1])
+      #ndif = norm(prob.solution - s[1])
+      k = k + 1
+      println(k)
+      row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], ndif, median(a.times) / 1e9)])
+      df = vcat(df, row)
+      #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+      #benchmark_df = vcat(benchmark_df, benchmark_row)
+      #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+      CSV.write(csv_file, df)
+      #CSV.write(csv_file_benchmark, benchmark_df)
+    catch e
+      println("erro: ", e)
+      solved = false
+      write(log_file, "$probname\n")
+    end
+    close(log_file)
+  end
+  close(csv_file)
+  #close(csv_file_benchmark)
+end
+
 
 function calcgradresid(file::String)
   set_problem = String.(readdlm(file))

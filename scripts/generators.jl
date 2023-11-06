@@ -18,14 +18,14 @@ function geradorcircle()
 end
 
 function geradoraut(h)
-  n = 1000  # tamanho da lista desejada
+  n = 120  # tamanho da lista desejada
   a = -120  # limite inferior do intervalo
   b = 120  # limite superior do intervalo
   c1 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
   c2 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
   c3 = round.(float(rand(n) .* (b - a) .+ a), digits=1)
   r = float(rand(5:170, 1000))
-  npts = float(rand(10:2000, 401))
+  npts = float(rand(8:50, 120))
   nout = float([floor(Int, h * x) for x in npts])
   for i = 1:100
     build_problem("sphere3D", [1.0, 1.0], [c1[i], c2[i], c3[i], r[i], npts[i], nout[i]])

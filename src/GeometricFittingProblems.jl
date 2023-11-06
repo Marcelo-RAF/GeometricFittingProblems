@@ -99,11 +99,13 @@ function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esfera
         end
         #xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
         #center = xnorm[1:end-2]
-        display(F)
+        #display(F)
         return F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
     elseif method == "nullspace"
+
         P[end, :] = zeros(n + 2)
         np = nullspace(P)
+
         #npnorm = np / np[end-1]
         #centernp = npnorm[1:end-2]
         #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))
@@ -127,11 +129,14 @@ function simetrica(D)
     return H
 end
 
+
+
 function hildebran(data, method::String, ε=1.0e-5)
     (N, n) = size(data)
     v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
     D = [data'; v'; -ones(1, N)]
     Dd = simetrica(D)
+    Dd = 1.0 / N * Dd #apagar
     if method == "eigenvector"
         F = eigen(Dd)
         indmin = 1
@@ -147,17 +152,24 @@ function hildebran(data, method::String, ε=1.0e-5)
         if valmin < -ε
             error("P does not have postive eigen value!")
         end
-        xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
-        center = xnorm[1:end-2]
+        xnorm1 = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
+        center1 = xnorm1[1:end-2]
+
+        #xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
+        #center = xnorm[1:end-2]
+
         #display(F)
-        return F.vectors[:,indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
+        return F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
     elseif method == "nullspace"
-        Dd[4, :] = zeros(n + 2)
+        Dd[end-1, :] = zeros(n + 2)
+        #Dd[2, :] = zeros(n + 2)
         np = nullspace(Dd)
+
         #npnew = [np[1], np[2], np[3], np[5], np[4]]
-        #npnorm = npnew / npnew[end]
+        #npnorm = np / np[3]
         #centernp = npnorm[1:end-2]
-        return np #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end-1]))
+        #display(Dd)
+        return np #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))
     end
 end
 
@@ -207,31 +219,33 @@ function LMCircsq(data, nout, θ, ε=1.0e-6)
 end
 
 
-function LMSORT(data, nout, θ, ε=1.0e-8)
-    ordres = sort_sphere_res(data, θ, nout)
+function LMSORT(data, nout, θ, ε=1.0e-6)
+    ordres = sort_sphere_res(data, θ[1], nout)
     antres = 0.0
     k = 1
+    kk = 0
     while abs(ordres[2] - antres) > ε
         antres = ordres[2]
-        θ = LMsphere(ordres[1], θ)
-        ordres = sort_sphere_res(data, θ, nout)
+        θ = LMsphere(ordres[1], θ[1])
+        kk = kk + θ[2]
+        ordres = sort_sphere_res(data, θ[1], nout)
         k = k + 1
     end
-    return θ, k
+    return θ[1], kk, k
 end
 
 
-function LOVOConformal(data, nout, θ, nome,ε=1.0e-5)
+function LOVOConformal(data, nout, θ, nome, ε=1.0e-5)
     ordres = conformalsort(data, θ, nout)
     k = 1
     antres = 0.0
     while abs(ordres[2] - antres) > ε
         antres = ordres[2]
         if nome == "algebraic"
-            θ = hildebran(ordres[1], "eigenvector")
+            θ = hildebran(ordres[1], "nullspace")
         end
         if nome == "geometric"
-            θ = CGAHypersphere(ordres[1], "eigenvector")
+            θ = CGAHypersphere(ordres[1], "nullspace")
         end
         ordres = conformalsort(data, θ, nout)
         k = k + 1
@@ -246,17 +260,18 @@ function solve(prob::FitProbType, method::String)
         return LMsphere(prob.data, initθ)
     end
     if method == "LMSORT"
+        initθ = [[0.0, 0.0, 0.0, 1.0], 0]
         return LMSORT(prob.data, prob.nout, initθ)
     end
     if method == "CGA-Hypersphere"
         return CGAHypersphere(prob.data)
     end
     if method == "LOVO-CGA-Geometric"
-        initθ = CGAHypersphere(prob.data, "eigenvector")
+        initθ = [0.0, 0.0, 0.0, 0.0]#CGAHypersphere(prob.data, "nullspace")
         return LOVOConformal(prob.data, prob.nout, initθ, "geometric")
     end
     if method == "LOVO-CGA-Algebraic"
-        initθ = hildebran(prob.data, "eigenvector")
+        initθ = hildebran(prob.data, "nullspace")
         return LOVOConformal(prob.data, prob.nout, initθ, "algebraic")
     end
 end
@@ -405,7 +420,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         for k = 1:nout
             w[:, iout[k]] = w[:, iout[k]] + [rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])]
         end
-        #G = randn(3, npts)
+        G = randn(3, npts)
         for i = 1:npts
             x[i] = w[1, i] #+ G[1, i]
             y[i] = w[2, i] #+ G[2, i]
@@ -475,9 +490,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         #  h = Int(npts/2) + 1
         # end
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -490,9 +505,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            dx = randn() * 0.15 * r
-            dy = randn() * 0.15 * r
-            dz = randn() * 0.15 * r
+            dx = rand() * 0.2 * r
+            dy = rand() * 0.2 * r
+            dz = rand() * 0.2 * r
             x[iout[k]] = x[iout[k]] + dx #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;]) 
             y[iout[k]] = y[iout[k]] + dy #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
             z[iout[k]] = z[iout[k]] + dz #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
@@ -640,7 +655,7 @@ function LMsphere(data, x0, ε=1.0e-5, λ_min=1e-4)
     λ = norm((J') * R, 2) / (norm(R, 2)^2)
     k1 = 2
     k2 = 1.5
-    while norm((J') * R) > ε && k < 500
+    while norm((J') * R) > ε && k < 100
         d = (J' * J + λ * Id) \ ((-J') * R)
         xn = x + d
         if 0.5 * norm(fsphere(xn, data), 2)^2 < 0.5 * norm(fsphere(x, data), 2)^2
@@ -830,7 +845,7 @@ function jcircle(x, P)
         end
         J[i, end] = -4 * x[end] * h[i]
     end
-    return sum(J, dims=1)[:, :]#J
+    return J #sum(J, dims=1)[:, :]#J
 end
 
 
@@ -874,7 +889,7 @@ function sort_sphere_res(P, x, nout)
         for j = 1:m
             v[i] = v[i] + (P[i, j] - x[j])^2
         end
-        v[i] = abs(v[i] - x[end]^2)
+        v[i] = (v[i] - x[end]^2)^2
     end
     indtrust = [1:n;]
     for i = 1:n-nout+1
@@ -997,7 +1012,7 @@ function visualize(prob, a)
         x = prob.solution[1] .+ prob.solution[3] * cos.(θ)
         y = prob.solution[2] .+ prob.solution[3] * sin.(θ)
         plot!(plt, xs, ys, color=:red, lab="solução do algoritmo")
-        plot!(plt, x, y, color=:green, lab="solução perfeita")
+        #plot!(plt, x, y, color=:green, lab="solução perfeita")
         display(plt)
     end
     if prob.name == "sphere3D" || prob.name == "\tsphere3D"
@@ -1053,6 +1068,35 @@ function visualize(prob, a)
 
 
 end
+
+function comparsol(prob, a1, a2, a3, a4)
+    pyplot()#beckendpyplot
+    plt = plot()
+    if prob.name == "sphere2D" || prob.name == "\tsphere2D"
+        plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
+        θ = [0.0:2*π/360:2*π;]
+        xs = a1[1] .+ a1[3] * cos.(θ)
+        ys = a1[2] .+ a1[3] * sin.(θ)
+        xss = a2[1] .+ a2[3] * cos.(θ)
+        yss = a2[2] .+ a2[3] * sin.(θ)
+        xk = a3[1] .+ a3[3] * cos.(θ)
+        yk = a3[2] .+ a3[3] * sin.(θ)
+        xkk = a4[1] .+ a4[3] * cos.(θ)
+        ykk = a4[2] .+ a4[3] * sin.(θ)
+
+
+        plot!(plt, xs, ys, color=:red, lab="solução L1")# legend=:outerbottomright)
+        plot!(plt, xss, yss, color=:green, lab="solução L2")# legend=:outerbottomright)
+        #plot!(plt, xk, yk, color=:blue, lab="solução L3")# legend=:outerbottomright)
+        # plot!(plt, xkk, ykk, color=:black, lab="solução L4") # legend=:outerbottomright)
+        plot!(plt, legend=:outerright)
+
+
+        #plot!(plt, x, y, color=:green, lab="solução perfeita")
+        display(plt)
+    end
+end
+
 
 
 function plot_plane(prob, m::Vector{Float64}, d::Float64, m2::Vector{Float64}, d2::Float64)
@@ -1114,8 +1158,6 @@ function show(io::IO, fout::FitOutputType)
     print(io, "  ↳ Minimum (.minimum) = $(fout.minimum) \n")
     print(io, "  ↳ Number of function calls (.feval) = $(fout.feval) \n")
 end
-
-
 
 
 
