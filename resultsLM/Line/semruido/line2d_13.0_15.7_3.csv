@@ -1,0 +1,10 @@
+name :	line2d
+data :	[-15.0 -179.3; -12.5 -293.6; -10.0 -114.3; -7.5 -163.6; -5.0 -49.3; -2.5 -16.8; 0.0 15.7; 2.5 48.2; 5.0 0.0; 7.5 113.2; 10.0 145.7; 12.5 178.2; 15.0 210.7]
+npts :	13
+nout :	3
+model :	(x,t) -> x[1]t + x[2]
+dim :	2
+cluster :	false
+noise :	false
+solution :	[13.0, 15.7]
+description :	type2: line model

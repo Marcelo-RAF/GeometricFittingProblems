@@ -2,7 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
 
-export load_problem, solve, build_problem, inverse_power_method, solve2, visualize, LMsphere, LMcircle, LMClass, LMClassCirc, plot_plane
+export load_problem, solve, build_problem, solve2, visualize, plot_plane, Levenberg, LovoLM, LMPersistent
 
 import Base.show
 
@@ -130,7 +130,6 @@ function simetrica(D)
 end
 
 
-
 function hildebran(data, method::String, ε=1.0e-5)
     (N, n) = size(data)
     v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
@@ -205,35 +204,6 @@ function conformalsort(P, x, nout)
 end
 
 
-function LMCircsq(data, nout, θ, ε=1.0e-6)
-    ordres = sort_circle_res(data, θ, nout)
-    antres = 0.0
-    k = 1
-    while abs(ordres[2] - antres) > ε
-        antres = ordres[2]
-        θ = LMcircle(ordres[1], θ)
-        ordres = sort_circle_res(data, θ, nout)
-        k = k + 1
-    end
-    return θ, k
-end
-
-
-function LMSORT(data, nout, θ, ε=1.0e-6)
-    ordres = sort_sphere_res(data, θ[1], nout)
-    antres = 0.0
-    k = 1
-    kk = 0
-    while abs(ordres[2] - antres) > ε
-        antres = ordres[2]
-        θ = LMsphere(ordres[1], θ[1])
-        kk = kk + θ[2]
-        ordres = sort_sphere_res(data, θ[1], nout)
-        k = k + 1
-    end
-    return θ[1], kk, k
-end
-
 
 function LOVOConformal(data, nout, θ, nome, ε=1.0e-5)
     ordres = conformalsort(data, θ, nout)
@@ -254,20 +224,12 @@ function LOVOConformal(data, nout, θ, nome, ε=1.0e-5)
 end
 
 
-
 function solve(prob::FitProbType, method::String)
-    if method == "LMsphere"
-        return LMsphere(prob.data, initθ)
-    end
-    if method == "LMSORT"
-        initθ = [[0.0, 0.0, 0.0, 1.0], 0]
-        return LMSORT(prob.data, prob.nout, initθ)
-    end
     if method == "CGA-Hypersphere"
         return CGAHypersphere(prob.data)
     end
     if method == "LOVO-CGA-Geometric"
-        initθ = [0.0, 0.0, 0.0, 0.0]#CGAHypersphere(prob.data, "nullspace")
+        initθ = CGAHypersphere(prob.data, "nullspace")
         return LOVOConformal(prob.data, prob.nout, initθ, "geometric")
     end
     if method == "LOVO-CGA-Algebraic"
@@ -278,22 +240,110 @@ end
 
 
 
-
-
-function solve2(prob::FitProbType, method::String, initθ=CGAHypercircle(prob.data))
-    if method == "CGA-Hypercircle"
-        return CGAHypercircle(prob.data)
-    end
-    if method == "LOVO-CGA-Hypercircle"
-        return LOVOCGAHypercircle(prob.data, prob.nout, initθ)
-    end
-    if method == "LMCircsq"
-        return LMCircsq(prob.data, prob.nout, initθ)
-    end
-end
-
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
-    if probtype == "line"
+    if probtype == "exponencial"
+        println("params need to be setup as [vector, npts, nout]")
+        p = [params[1], params[2]]
+        npts = Int(params[3])
+        nout = Int(params[4])
+        t = range(0.0, stop=15.0, length=npts)
+        x = zeros(npts)
+        y = zeros(npts)
+        ruid = randn(npts)
+        for i = 1:npts
+            x[i] = t[i]
+            y[i] = p[1] * exp(-p[2] * x[i]) + ruid[i]
+        end
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        r = 3
+        for k = 1:nout
+            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])#rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
+        end
+
+        FileMatrix = ["name :" "exponencial"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*exp(-x[2]*t) "; "dim :" 2; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type: exponencial function"]
+
+        open("exponencial_$(p[1])_$(p[2])_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+    end
+    if probtype == "cubic"
+        println("params need to be setup as [vector, npts, nout]")
+        p = [params[1], params[2], params[3], params[4]]
+        npts = Int(params[5])
+        nout = Int(params[6])
+        t = range(-5.0, stop=5.0, length=npts)
+        x = zeros(npts)
+        y = zeros(npts)
+        ruid = randn(npts)
+        for i = 1:npts
+            x[i] = t[i]
+            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] + randn()
+        end
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        for k = 1:nout
+            idx = iout[k]
+            r = y[idx]
+            y[idx] += rand([-1.0, 1.0]) * (2 * r * 0.5)
+        end
+
+        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]t^3 + x[2]t^2 + x[3]t + x[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: cubic model"]
+
+        open("cubic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+    end
+    if probtype == "line2d"
+        println("params need to be setup as [vector, npts, nout]")
+        p = [params[1], params[2]]
+        npts = Int(params[3])
+        nout = Int(params[4])
+        t = range(-15.0, stop=15.0, length=npts)
+        x = zeros(npts)
+        y = zeros(npts)
+        ruid = randn(npts)
+        for i = 1:npts
+            x[i] = t[i]
+            y[i] = p[1] * t[i] + p[2] + ruid[i]
+        end
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        for k = 1:nout
+            idx = iout[k]
+            r = y[idx]
+            y[idx] += rand([-1.0, 1.0]) * (2 * r * 0.5)
+        end
+
+        FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]t + x[2]"; "dim :" 2; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type2: line model"]
+
+        open("line2d_$(p[1])_$(p[2])_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+
+    end
+    if probtype == "line3d"
         println("params need to be setup as [point,direction,npts,nout]")
         p0 = [params[1], params[2], params[3]]
         u = [params[4], params[5], params[6]]
@@ -326,9 +376,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" "description :" [[p0, p0]]]
+        FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" "description :" [[p0, p0]]]
 
-        open("line_$(u[1])_$(u[2])_$(u[3])_$(nout).csv", "w") do io
+        open("line3d_$(u[1])_$(u[2])_$(u[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
         end
     end
@@ -340,19 +390,22 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         npts = Int(params[10])
         # λ = range(0, stop = 66, length=npts)
         # μ = range(-50, stop = 5, length=npts)
-        pp = range(-50.0, stop=50.0, length=npts)
+        pp = range(-10.0, stop=10.0, length=npts)
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
         vn = cross(u, v)
         vn = vn / norm(vn)
+        d = dot(vn, p0)
+        vn = push!(vn, d)
+        ruid = randn(3, npts)
         for i = 1:npts
             for j = 1:npts
                 λ = rand(pp)
                 μ = rand(pp)
-                x[i] = p0[1] + λ * u[1] + μ * v[1]
-                y[i] = p0[2] + λ * u[2] + μ * v[2]
-                z[i] = p0[3] + λ * u[3] + μ * v[3]
+                x[i] = p0[1] + λ * u[1] + μ * v[1] #+ ruid[1,i]
+                y[i] = p0[2] + λ * u[2] + μ * v[2] #+ ruid[2,i]
+                z[i] = p0[3] + λ * u[3] + μ * v[3] #+ ruid[3,i]
             end
         end
         nout = Int(params[11])
@@ -387,7 +440,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         u = u / norm(u)
         h = v - (dot(v, u) / norm(u)^2) * u
         v = h / norm(h)
+        u = round.(u, digits=1)
+        v = round.(v, digits=1)
         vn = cross(u, v) / norm(cross(u, v))
+        vnc = vcat(vn, c)
         λ = [0:4/npts:1;]
         w = zeros(Int(3.0), npts)
         #h = zeros(Int(3.0), npts)
@@ -422,11 +478,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i] #+ G[1, i]
-            y[i] = w[2, i] #+ G[2, i]
-            z[i] = w[3, i] #+ G[3, i]
+            x[i] = w[1, i] + G[1, i]
+            y[i] = w[2, i] + G[2, i]
+            z[i] = w[3, i] + G[3, i]
         end
-        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" [[u, v]]]
+        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vnc, r)]; "description :" [[u, v]]]
 
         open("circle3D_$(c[1])_$(c[2])_$(c[3])_$(r)_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -439,7 +495,6 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         npts = Int(params[4])
         x = zeros(npts)
         y = zeros(npts)
-
         ruid = randn(2, npts)
         θ = range(0, stop=2π, length=npts) #Int(ceil(npts/2)))
         #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
@@ -518,155 +573,30 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             writedlm(io, FileMatrix)
         end
     end
-
 end
 
-
-function fsphere(xinit, data)
-    h = data
-    (m, n) = size(data)
-    r = zeros(m)
-    for i = 1:m
-        for j = 1:n
-            r[i] = (h[i, j] - xinit[j])^2 + r[i]
-        end
-        r[i] = r[i] - xinit[end]^2
-    end
-    return r
-end
-
-
-function jsphere(xinit, data)
-    h = data
-    (m, n) = size(data)
-    J = zeros(m, n + 1)
-    for i = 1:m
-        for j = 1:n
-            J[i, j] = -2 * (h[i, j] - xinit[j])
-        end
-        J[i, end] = -2 * xinit[end]
-    end
-    return J
-end
-
-
-
-
-function fplane(xi, data)
-    h = data
-    (m, n) = size(data)
-    r = zeros(m)
-    for i = 1:m
-        for j = 1:n
-            r[i] = r[i] + xi[j] * h[i, j]
-        end
-        r[i] = r[i] - xi[end]
-    end
-    return r
-end
-
-function jplane(xi, data)
-    h = data
-    (m, n) = size(data)
-    J = zeros(m, n + 1)
-    for i = 1:m
-        for j = 1:n
-            J[i, j] = h[i, j]
-        end
-        J[i, end] = 1.0
-    end
-    return J
-end
-
-
-
-function LMClass(prob, xk, ε=1.0e-5, MAXIT=100)
-    newdata = sort_sphere_res(prob.data, xk, prob.nout)
-    R = fsphere(xk, newdata[1])
-    J = jsphere(xk, newdata[1])
-    (m, n) = size(J)
-    Id = Matrix{Float64}(I, n, n)
-    k = 1
-    λ_up = 2.0
-    λ_down = 2.0
-    λ = 1.0
-    μ = 0.7
-    dk = 0.0
-    while norm(J' * R, 2) > ε && k < MAXIT
-        dk = (J' * J + λ * Id) \ ((-J') * R)
-        md = 0.5 * (norm((R + J * dk), 2))^2 + λ * norm(dk, 2)^2
-        Rd = fsphere(xk + dk, newdata[1])
-        ρk = (0.5 * norm(R, 2)^2 - 0.5 * norm(Rd, 2)^2) / (0.5 * norm(R, 2)^2 - md)
-        if ρk < μ
-            λ = λ * λ_up
-        else
-            λ = λ / λ_down
-            xk = xk + dk
-            newdata = sort_sphere_res(prob.data, xk, prob.nout)
-            R = fsphere(xk, newdata[1])
-            J = jsphere(xk, newdata[1])
-            k = k + 1
-        end
-    end
-    return xk, k
-end
-
-
-function LMClassCirc(prob, xk, ε=1.0e-5, MAXIT=100)
-    newdata = sort_circle_res(prob.data, xk, prob.nout)
-    R = fcircle(xk, newdata[1])
-    J = jcircle(xk, newdata[1])
-    (m, n) = size(J)
-    Id = Matrix{Float64}(I, n, n)
-    k = 1
-    λ_up = 2.0
-    λ_down = 2.0
-    λ = 1.0
-    μ = 0.7
-    dk = 0.0
-    while norm(J' * R, 2) > ε && k < MAXIT
-        dk = (J' * J + λ * Id) \ ((-J') * R)
-        md = 0.5 * (norm((R + J * dk), 2))^2 + λ * norm(dk, 2)^2
-        Rd = fcircle(xk + dk, newdata[1])
-        ρk = (0.5 * norm(R, 2)^2 - 0.5 * norm(Rd, 2)^2) / (0.5 * norm(R, 2)^2 - md)
-        if ρk < μ
-            λ = λ * λ_up
-        else
-            λ = λ / λ_down
-            xk = xk + dk
-            newdata = sort_circle_res(prob.data, xk, prob.nout)
-            R = fcircle(xk, newdata[1])
-            J = jcircle(xk, newdata[1])
-            k = k + 1
-        end
-    end
-    return xk, k
-end
-
-
-function LMsphere(data, x0, ε=1.0e-5, λ_min=1e-4)
-    k = 1
-    x = x0
-    R = fsphere(x, data)
-    J = jsphere(x, data)
+function Levenberg(Function, Jacobian, x, data, ε=10e-4, λ_min=1e-2)
+    k = 0
+    F = Function(x, data)
+    J = Jacobian(x, data)
     (m, n) = size(J)
     xn = zeros(length(x))
     Id = Matrix{Float64}(I, n, n)
-    λ = norm((J') * R, 2) / (norm(R, 2)^2)
-    k1 = 2
-    k2 = 1.5
-    while norm((J') * R) > ε && k < 100
-        d = (J' * J + λ * Id) \ ((-J') * R)
+    λ = 1.0#norm((J') * F, 2) / (norm(F, 2)^2)
+    k1 = 2.0
+    k2 = 2.0
+    while norm((J') * F) > ε && k < 50
+        d = (J' * J + λ * Id) \ ((-J') * F)
         xn = x + d
-        if 0.5 * norm(fsphere(xn, data), 2)^2 < 0.5 * norm(fsphere(x, data), 2)^2
+        if 0.5 * norm(Function(xn, data), 2)^2 < 0.5 * norm(Function(x, data), 2)^2
             x = xn
             if λ < λ_min
                 λ = λ_min
             else
                 λ = λ / k1
             end
-            R = fsphere(x, data)
-            J = jsphere(x, data)
+            F = Function(x, data)
+            J = Jacobian(x, data)
         else
             λ = λ * k2
         end
@@ -675,37 +605,58 @@ function LMsphere(data, x0, ε=1.0e-5, λ_min=1e-4)
     return x, k
 end
 
-function LMplane(data, x0, ε=1.0e-5, λ_min=1e-4)
-    k = 1
-    x = x0
-    R = fplane(x, data)
-    J = jplane(x, data)
+function LovoLM(Function, Jacobian, Ord, xk, data, nout, ε=1.0e-4, MAXIT=50)
+    newdata = Ord(data, xk, nout)
+    R = Function(xk, newdata[1])
+    J = Jacobian(xk, newdata[1])
     (m, n) = size(J)
-    xn = zeros(length(x))
     Id = Matrix{Float64}(I, n, n)
-    λ = norm((J') * R, 2) / (norm(R, 2)^2)
-    k1 = 2
-    k2 = 1.5
-    while norm((J') * R) > ε && k < 500
-        d = (J' * J + λ * Id) \ ((-J') * R)
-        xn = x + d
-        if 0.5 * norm(fplane(xn, data), 2)^2 < 0.5 * norm(fplane(x, data), 2)^2
-            x = xn
-            if λ < λ_min
-                λ = λ_min
-            else
-                λ = λ / k1
-            end
-            R = fplane(x, data)
-            J = jplane(x, data)
+    k = 0
+    λ_up = 2.0
+    λ_down = 2.0
+    λ = 1.0
+    μ = 0.7
+    dk = 0.0
+    while norm(J' * R, 2) >= ε && k < MAXIT
+        dk = (J' * J + λ * Id) \ ((-J') * R)
+        md = 0.5 * (norm((R + J * dk), 2))^2 + λ * norm(dk, 2)^2
+        Rd = Function(xk + dk, newdata[1])
+        ρk = (0.5 * norm(R, 2)^2 - 0.5 * norm(Rd, 2)^2) / (0.5 * norm(R, 2)^2 - md)
+        if ρk < μ
+            λ = λ * λ_up
         else
-            λ = λ * k2
+            λ = λ / λ_down
+            xk = xk + dk
+            newdata = Ord(data, xk, nout)
+            R = Function(xk, newdata[1])
+            J = Jacobian(xk, newdata[1])
+            k = k + 1
         end
-        k = k + 1
     end
-    x = x / norm(x)
-    return x, k
+    #xk = xk/norm(xk[1:3])
+    return xk, k, newdata[1]
 end
+
+#Levenberg(Function, Jacobian, x, data, ε=10e-5, λ_min=1e-4)
+
+function LMPersistent(Function, Jacobian, Ord, xk, data, nout, ε=1.0e-4)
+    ordres = Ord(data, xk[1], nout)
+    antres = 0.0
+    k = 1
+    kk = 0
+    while abs(ordres[2] - antres) > ε
+        antres = ordres[2]
+        xk = Levenberg(Function, Jacobian, xk[1], ordres[1])
+        kk = kk + xk[2]
+        ordres = Ord(data, xk[1], nout)
+        k = k + 1
+        #display(abs(ordres[2] - antres))
+    end
+    #x = xk[1]
+    #x = x/norm(x[1:3])
+    return xk[1], kk, k, ordres[1]
+end
+
 
 function CGAHypercircle(data; ε=1.0e-4)
     (N, n) = size(data)
@@ -810,167 +761,6 @@ function circleag(s1, s2)
 end
 
 
-
-function fcircle(x, P)
-    (m, n) = size(P)
-    r = zeros(m)
-    a = zeros(m)
-    for i = 1:m
-        a[i] = (dot(P[i, :] - x[4:6], x[1:3]))^2
-        for j = 1:n
-            r[i] = r[i] + (P[i, j] - x[3+j])^2
-        end
-        r[i] = (r[i] - x[7]^2)^2 + a[i]
-    end
-    return r
-end
-
-
-function jcircle(x, P)
-    (m, n) = size(P)
-    J = zeros(m, 7)
-    a = zeros(m)
-    h = zeros(m)
-    for i = 1:m
-        for j = 1:n
-            h[i] = h[i] + (P[i, j] - x[3+j])^2
-        end
-        h[i] = h[i] - x[end]^2
-    end
-    for i = 1:m
-        a[i] = (dot(P[i, :] - x[4:6], x[1:3]))
-        for j = 1:n
-            J[i, j] = 2 * (P[i, j] - x[j+3]) * a[i]
-            J[i, j+3] = -4 * (P[i, j] - x[j+3]) * h[i] - 2 * x[j] * a[i]
-        end
-        J[i, end] = -4 * x[end] * h[i]
-    end
-    return J #sum(J, dims=1)[:, :]#J
-end
-
-
-
-function LMcircle(data, x0, ε=1.0e-6, λ_min=1e-4)
-    k = 1
-    x = x0
-    R = fcircle(x, data)
-    J = jcircle(x, data)
-    (m, n) = size(J)
-    xn = zeros(length(x))
-    Id = Matrix{Float64}(I, n, n)
-    λ = norm((J') * R, 2) / (norm(R, 2)^2)
-    k1 = 2
-    k2 = 1.5
-    while norm((J') * R) > ε && k < 1000
-        d = (J' * J + λ * Id) \ ((-J') * R)
-        xn = x + d
-        if 0.5 * norm(fcircle(xn, data), 2)^2 < 0.5 * norm(fcircle(x, data), 2)^2
-            x = xn
-            if λ < λ_min
-                λ = λ_min
-            else
-                λ = λ / k1
-            end
-            R = fcircle(x, data)
-            J = jcircle(x, data)
-        else
-            λ = λ * k2
-        end
-        k = k + 1
-    end
-    return x
-end
-
-function sort_sphere_res(P, x, nout)
-    n = length(P[:, 1])
-    m = length(P[1, :])
-    v = zeros(n)
-    for i = 1:n
-        for j = 1:m
-            v[i] = v[i] + (P[i, j] - x[j])^2
-        end
-        v[i] = (v[i] - x[end]^2)^2
-    end
-    indtrust = [1:n;]
-    for i = 1:n-nout+1
-        for j = i+1:n
-            if v[i] > v[j]
-                aux = v[j]
-                v[j] = v[i]
-                v[i] = aux
-
-                aux2 = indtrust[j]
-                indtrust[j] = indtrust[i]
-                indtrust[i] = aux2
-            end
-        end
-    end
-    #    println(indtrust[n-nout+1:n])
-    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
-end
-
-function sort_plane_res(P, x, nout)
-    n = length(P[:, 1])
-    m = length(P[1, :])
-    v = zeros(n)
-    println(x)
-    for i = 1:n
-        for j = 1:m
-            v[i] = v[i] + P[i, j] * x[j]
-        end
-        v[i] = (v[i] - x[end])^2
-    end
-    indtrust = [1:n;]
-    for i = 1:n-nout+1
-        for j = i+1:n
-            if v[i] > v[j]
-                aux = v[j]
-                v[j] = v[i]
-                v[i] = aux
-
-                aux2 = indtrust[j]
-                indtrust[j] = indtrust[i]
-                indtrust[i] = aux2
-            end
-        end
-    end
-    #    println(indtrust[n-nout+1:n])
-    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
-end
-
-
-function sort_circle_res(P, x, nout)
-    N = length(P[:, 1])
-    M = length(P[1, :])
-    v = zeros(N)
-    a = zeros(N)
-    #for i = 1:N
-    #       v[i] = (norm(P[i, :] - x[4:6])^2-x[7]^2)^2 + (dot(P[i,:]-x[4:6],x[1:3]))^2  
-    #end
-    for i = 1:N
-        a[i] = abs(dot(P[i, :] - x[4:6], x[1:3]))
-        for j = 1:M
-            v[i] = v[i] + (P[i, j] - x[3+j])^2 #corrigir aqui
-        end
-        v[i] = abs(v[i] - x[7]^2) + a[i]
-    end
-    indtrust = [1:N;]
-    for i = 1:N-nout+1    #1:N-nout+1
-        for j = i+1:N    #i+1:N
-            if v[i] > v[j]
-                aux = v[j]
-                v[j] = v[i]
-                v[i] = aux
-
-                aux2 = indtrust[j]
-                indtrust[j] = indtrust[i]
-                indtrust[i] = aux2
-            end
-        end
-    end
-    return P[indtrust[1:N-nout], :], sum(v[1:N-nout])
-end
-
 function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-6)
     ordres = sort_circle_res(data, θ, nout)
     k = 1
@@ -984,7 +774,6 @@ function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-6)
     display(k)
     return θ
 end
-
 
 
 function externo(u, v)
@@ -1034,17 +823,17 @@ function visualize(prob, a)
             h5[i] = a[2]
             h6[i] = a[3]
         end
-        x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
-        y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
-        z = h3 .+ prob.solution[4] * cos.(v)'
+        #x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
+        #y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
+        #z = h3 .+ prob.solution[4] * cos.(v)'
         xs = h4 .+ a[4] * cos.(u) * sin.(v)'
         ys = h5 .+ a[4] * sin.(u) * sin.(v)'
         zs = h6 .+ a[4] * cos.(v)'
-        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:blue, label="CGA")
-        wireframe!(x, y, z, aspect_ratio=:equal, color=:red, label="LOVO-CGA")
+        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:red)#, label="CGA")
+        #wireframe!(x, y, z, aspect_ratio=:equal, color=:red, label="LOVO-CGA")
         return plt
     end
-    if prob.name == "circles3d" || prob.name == "\tcircsle3d"
+    if prob.name == "circle3d" || prob.name == "\tcircle3d"
         vn = [a[1], a[2], a[3]]
         u = [-a[2], a[1], 0.0]
         v = [0.0, a[3], -a[2]]
@@ -1140,7 +929,6 @@ function plot_plane(prob, m::Vector{Float64}, d::Float64, m2::Vector{Float64}, d
     wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:blue, label="CGA")
     wireframe!(xn, yn, zn, aspect_ratio=:equal, color=:red, label="CGdA")
 end
-
 
 
 

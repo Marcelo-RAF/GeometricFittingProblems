@@ -9,6 +9,201 @@ function difer(u, v)
   return h
 end
 
+function solqual(u, v)
+  h = 0.0
+  h = norm(u - v)
+  return h
+end
+
+function benchLOVO(namecsv::String, file::String, method::String, Function, Jacobian, Ord, qsol, xk)
+  if method == "LMPersistent"
+    set_problem = String.(readdlm(file))
+    csv_file = open(namecsv, "w")
+    #csv_file_benchmark = open("benchlm3_40.csv", "w")
+    df = DataFrame()
+    k = 0
+    #benchmark_df = DataFrame()
+    for probname ∈ set_problem
+      log_file = open("logpersistentlovo.txt", "w")
+      prob = load_problem(probname)
+      solved = false
+      try
+        #x = Levenberg(fcubic, jcubic, [1.0, 1.0, 1.0, 1.0], prob.data)
+        s = LMPersistent(Function, Jacobian, Ord, xk, prob.data, prob.nout)
+        a = @benchmark LMPersistent($Function, $Jacobian, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 70
+        ndif = qsol(s[1], s[4])
+        #ndif = norm(prob.solution - s[1])
+        k = k + 1
+        println(k)
+        row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3], ndif, median(a.times) / 1e9)])
+        df = vcat(df, row)
+        #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+        #benchmark_df = vcat(benchmark_df, benchmark_row)
+        #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+        CSV.write(csv_file, df)
+        #CSV.write(csv_file_benchmark, benchmark_df)
+      catch e
+        println("erro: ", e)
+        solved = false
+        write(log_file, "$probname\n")
+      end
+      close(log_file)
+    end
+    close(csv_file)
+    #close(csv_file_benchmark)
+  end
+  if method == "LMClass"
+    set_problem = String.(readdlm(file))
+    csv_file = open(namecsv, "w")
+    #csv_file_benchmark = open("benchlm3_40.csv", "w")
+    df = DataFrame()
+    k = 0
+    #benchmark_df = DataFrame()
+    for probname ∈ set_problem
+      log_file = open("loglmclass.txt", "w")
+      prob = load_problem(probname)
+      solved = false
+      try
+        #x = Levenberg(fcubic, jcubic, [1.0, 1.0, 1.0, 1.0], prob.data)
+        s = LovoLM(Function, Jacobian, Ord, xk, prob.data, prob.nout)
+        a = @benchmark LovoLM($Function, $Jacobian, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 70
+        ndif = qsol(s[1], s[3])
+        k = k + 1
+        println(k)
+        row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], ndif, median(a.times) / 1e9)])
+        df = vcat(df, row)
+        #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+        #benchmark_df = vcat(benchmark_df, benchmark_row)
+        #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+        CSV.write(csv_file, df)
+        #CSV.write(csv_file_benchmark, benchmark_df)
+      catch e
+        println("erro: ", e)
+        solved = false
+        write(log_file, "$probname\n")
+      end
+      close(log_file)
+    end
+    close(csv_file)
+    #close(csv_file_benchmark)
+  end
+end
+
+function benchLOVOwnoise(namecsv::String, file::String, method::String, Function, Jacobian, Ord, qsol, xk)
+  if method == "LMPersistent"
+    set_problem = String.(readdlm(file))
+    csv_file = open(namecsv, "w")
+    #csv_file_benchmark = open("benchlm3_40.csv", "w")
+    df = DataFrame()
+    k = 0
+    #benchmark_df = DataFrame()
+    for probname ∈ set_problem
+      log_file = open("logpersistentlovo.txt", "w")
+      prob = load_problem(probname)
+      solved = false
+      try
+        #x = Levenberg(fcubic, jcubic, [1.0, 1.0, 1.0, 1.0], prob.data)
+        s = LMPersistent(Function, Jacobian, Ord, xk, prob.data, prob.nout)
+        a = @benchmark LMPersistent($Function, $Jacobian, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 70
+        ndif = qsol(prob.solution, s[1])
+        #ndif = norm(prob.solution - s[1])
+        k = k + 1
+        println(k)
+        row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3], ndif, median(a.times) / 1e9)])
+        df = vcat(df, row)
+        #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+        #benchmark_df = vcat(benchmark_df, benchmark_row)
+        #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+        CSV.write(csv_file, df)
+        #CSV.write(csv_file_benchmark, benchmark_df)
+      catch e
+        println("erro: ", e)
+        solved = false
+        write(log_file, "$probname\n")
+      end
+      close(log_file)
+    end
+    close(csv_file)
+    #close(csv_file_benchmark)
+  end
+  if method == "LMClass"
+    set_problem = String.(readdlm(file))
+    csv_file = open(namecsv, "w")
+    #csv_file_benchmark = open("benchlm3_40.csv", "w")
+    df = DataFrame()
+    k = 0
+    #benchmark_df = DataFrame()
+    for probname ∈ set_problem
+      log_file = open("loglmclass.txt", "w")
+      prob = load_problem(probname)
+      solved = false
+      try
+        #x = Levenberg(fcubic, jcubic, [1.0, 1.0, 1.0, 1.0], prob.data)
+        s = LovoLM(Function, Jacobian, Ord, xk, prob.data, prob.nout)
+        a = @benchmark LovoLM($Function, $Jacobian, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 70
+        ndif = qsol(prob.solution, s[1])
+        k = k + 1
+        println(k)
+        row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], ndif, median(a.times) / 1e9)])
+        df = vcat(df, row)
+        #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
+        #benchmark_df = vcat(benchmark_df, benchmark_row)
+        #df = DataFrame(solution_LOVOCGA = [s], prob_solution = [prob.solution])
+        CSV.write(csv_file, df)
+        #CSV.write(csv_file_benchmark, benchmark_df)
+      catch e
+        println("erro: ", e)
+        solved = false
+        write(log_file, "$probname\n")
+      end
+      close(log_file)
+    end
+    close(csv_file)
+    #close(csv_file_benchmark)
+  end
+end
+
+
+function chamadasbench()
+  cd("Desktop\\cas\\sphereRUIDO")
+  benchLOVO("LMClass.csv", "testenomes.txt", "LMClass", fsphere, jsphere, sort_sphere_res, residalgebric, [1.0, 1.0, 1.0])
+  benchLOVO("LMPers.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, residalgebric, [[1.0, 1.0, 1.0], 0])
+  cd("..")
+  cd("cubicRUIDO\\30")
+  benchLOVO("LMClass.csv", "testenomes.txt", "LMClass", fcubic, jcubic, sort_cubic, residcubic, [1.0, 1.0, 1.0, 1.0])
+  benchLOVO("LMPers.csv", "testenomes.txt", "LMPersistent", fcubic, jcubic, sort_cubic, residcubic, [[1.0, 1.0, 1.0, 1.0], 0])
+  cd()
+  cd("Desktop\\cas\\sphere")
+  benchLOVOwnoise("LMClass.csv", "testenomes.txt", "LMClass", fsphere, jsphere, sort_sphere_res, difer, [1.0, 1.0, 1.0])
+  benchLOVOwnoise("LMPers.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, difer, [[1.0, 1.0, 1.0], 0])
+  cd()
+  cd("Desktop\\testes\\Cubic\\withoutnoise\\30")
+  benchLOVOwnoise("LMClass.csv", "testenomes.txt", "LMClass", fcubic, jcubic, sort_cubic, solqual, [1.0, 1.0, 1.0, 1.0])
+  benchLOVOwnoise("LMPers.csv", "testenomes.txt", "LMPersistent", fcubic, jcubic, sort_cubic, solqual, [[1.0, 1.0, 1.0, 1.0], 0])
+  cd("..")
+  cd("10")
+  benchLOVOwnoise("LMClass.csv", "testenomes.txt", "LMClass", fcubic, jcubic, sort_cubic, solqual, [1.0, 1.0, 1.0, 1.0])
+  benchLOVOwnoise("LMPers.csv", "testenomes.txt", "LMPersistent", fcubic, jcubic, sort_cubic, solqual, [[1.0, 1.0, 1.0, 1.0], 0])
+  cd()
+  cd("Desktop\\testes\\Spheres\\3d\\withnoise\\20")
+  benchLOVO("LMClass.csv", "testenomes.txt", "LMClass", fsphere, jsphere, sort_sphere_res, residalgebric, [1.0, 1.0, 1.0, 1.0])
+  benchLOVO("LMPers.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, residalgebric, [[1.0, 1.0, 1.0, 1.0], 0])
+  cd("..")
+  cd("30")
+  benchLOVO("LMClass.csv", "testenomes.txt", "LMClass", fsphere, jsphere, sort_sphere_res, residalgebric, [1.0, 1.0, 1.0, 1.0])
+  benchLOVO("LMPers.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, residalgebric, [[1.0, 1.0, 1.0, 1.0], 0])
+end
+
+function spherebench()
+  benchLOVOwnoise("LMClass.csv", "testenomes.txt", "LMClass", fline, jline, sort_line, solqual, [1.0, 1.0])
+  benchLOVOwnoise("LMPers.csv", "testenomes.txt", "LMPersistent", fline, jline, sort_line, solqual, [[1.0, 1.0], 0])
+  cd("..")
+  cd("ruido")
+  benchLOVO("LMClass.csv", "testenomes.txt", "LMClass", fline, jline, sort_line, residline, [1.0, 1.0])
+  benchLOVO("LMPers.csv", "testenomes.txt", "LMPersistent", fline, jline, sort_line, residline, [[1.0, 1.0], 0])
+end
+
+
 function testeLM(file::String, method::String)
   set_problem = String.(readdlm(file))
   csv_file = open("persistentLM2.csv", "w")
