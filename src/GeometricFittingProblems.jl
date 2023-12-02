@@ -285,7 +285,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         ruid = randn(npts)
         for i = 1:npts
             x[i] = t[i]
-            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] + randn()
+            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] #+ randn()
         end
         k = 1
         iout = []
@@ -296,10 +296,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
+        r = 50.0
         for k = 1:nout
-            idx = iout[k]
-            r = y[idx]
-            y[idx] += rand([-1.0, 1.0]) * (2 * r * 0.5)
+            y[iout[k]] = y[iout[k]] * randn()   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
         FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]t^3 + x[2]t^2 + x[3]t + x[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: cubic model"]
@@ -515,8 +514,8 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         #dx = rand() * 0.1 * r # deslocamento aleatório em x
         #dy = rand() * 0.1 * r # deslocamento aleatório em y
         for k = 1:nout
-            x[iout[k]] = x[iout[k]] + rand([-(0.2)*r:0.1:(0.2)*r;])
-            y[iout[k]] = y[iout[k]] + rand([-(0.2)*r:0.1:(0.2)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            x[iout[k]] = x[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
         FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
 
@@ -583,8 +582,8 @@ function Levenberg(Function, Jacobian, x, data, ε=10e-4, λ_min=1e-2)
     xn = zeros(length(x))
     Id = Matrix{Float64}(I, n, n)
     λ = 1.0#norm((J') * F, 2) / (norm(F, 2)^2)
-    k1 = 2.0
-    k2 = 2.0
+    k1 = 2.5
+    k2 = 1.5
     while norm((J') * F) > ε && k < 50
         d = (J' * J + λ * Id) \ ((-J') * F)
         xn = x + d
