@@ -241,6 +241,40 @@ end
 
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
+    if probtype == "logistic"
+        println("params need to be setup as [vector, npts, nout]")
+        p = [params[1], params[2], params[3], params[4]]
+        npts = Int(params[5])
+        nout = Int(params[6])
+        t = range(-50.0, stop=50.0, length=npts)
+        x = zeros(npts)
+        y = zeros(npts)
+        sgn = sign(randn())
+        for i = 1:npts
+            x[i] = t[i]
+            y[i] = p[1] + p[2] / (1 + exp(-p[3] * x[i] + p[4]))
+        end
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        for k = 1:nout
+            y[iout[k]] = p[1] + p[2] / (1 + exp(-p[3] * x[iout[k]] + p[4])) + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+        end
+        FileMatrix = ["name :" "logistic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1] + x[2]/(1 + exp(-x[3]*t + x[4]))"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: cubic model"]
+
+        open("logistic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+
+
+
+    end
     if probtype == "exponencial"
         println("params need to be setup as [vector, npts, nout]")
         p = [params[1], params[2]]
@@ -282,10 +316,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         t = range(-5.0, stop=5.0, length=npts)
         x = zeros(npts)
         y = zeros(npts)
-        ruid = randn(npts)
+        sgn = sign(randn())
         for i = 1:npts
             x[i] = t[i]
-            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] #+ randn()
+            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] #+ (1.0+2*rand()) * 7.0*sgn
         end
         k = 1
         iout = []
@@ -296,12 +330,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
-        r = 50.0
         for k = 1:nout
-            y[iout[k]] = y[iout[k]] * randn()   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            y[iout[k]] = p[1] * x[iout[k]]^3 + p[2] * x[iout[k]]^2 + p[3] * x[iout[k]] + p[4] + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
-        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]t^3 + x[2]t^2 + x[3]t + x[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: cubic model"]
+        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t^3 + x[2]*t^2 + x[3]*t + x[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: cubic model"]
 
         open("cubic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -315,10 +348,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         t = range(-15.0, stop=15.0, length=npts)
         x = zeros(npts)
         y = zeros(npts)
-        ruid = randn(npts)
+        sgn = sign(randn())
         for i = 1:npts
             x[i] = t[i]
-            y[i] = p[1] * t[i] + p[2] + ruid[i]
+            y[i] = p[1] * x[i] + p[2] + (1.0 + 2 * rand()) * 7.0 * sgn
         end
         k = 1
         iout = []
@@ -330,12 +363,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            idx = iout[k]
-            r = y[idx]
-            y[idx] += rand([-1.0, 1.0]) * (2 * r * 0.5)
+            y[iout[k]] = p[1] * x[iout[k]] + p[2] + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
-        FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]t + x[2]"; "dim :" 2; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type2: line model"]
+        FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t + x[2]"; "dim :" 2; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type2: line model"]
 
         open("line2d_$(p[1])_$(p[2])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -375,7 +406,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" "description :" [[p0, p0]]]
+        FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λ*u"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" "description :" [[p0, p0]]]
 
         open("line3d_$(u[1])_$(u[2])_$(u[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -423,7 +454,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λu + μv"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
+        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λ*u + μ*v"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
 
         open("plane_$(vn[1])_$(vn[2])_$(vn[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -473,13 +504,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            w[:, iout[k]] = w[:, iout[k]] + [rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;]), rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])]
+            w[:, iout[k]] = w[:, iout[k]] + [rand([-0.5*r:0.1:0.5*r;]), rand([-0.5*r:0.1:0.5*r;]), rand([-0.5*r:0.1:0.5*r;])]
         end
-        G = randn(3, npts)
+        #G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i] + G[1, i]
-            y[i] = w[2, i] + G[2, i]
-            z[i] = w[3, i] + G[3, i]
+            x[i] = w[1, i] #+ G[1, i]
+            y[i] = w[2, i] #+ G[2, i]
+            z[i] = w[3, i] #+ G[3, i]
         end
         FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vnc, r)]; "description :" [[u, v]]]
 
@@ -517,7 +548,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             x[iout[k]] = x[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])
             y[iout[k]] = y[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
-        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
+        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - x[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
 
         open("sphere2D_$(c[1])_$(c[2])_$(c[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -566,7 +597,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + dy #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
             z[iout[k]] = z[iout[k]] + dz #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
         end
-        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - x[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
         open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io #o que essa linha faz exatamente?
             writedlm(io, FileMatrix)
@@ -583,7 +614,7 @@ function Levenberg(Function, Jacobian, x, data, ε=10e-4, λ_min=1e-2)
     Id = Matrix{Float64}(I, n, n)
     λ = 1.0#norm((J') * F, 2) / (norm(F, 2)^2)
     k1 = 2.5
-    k2 = 1.5
+    k2 = 3.5
     while norm((J') * F) > ε && k < 50
         d = (J' * J + λ * Id) \ ((-J') * F)
         xn = x + d
@@ -601,6 +632,7 @@ function Levenberg(Function, Jacobian, x, data, ε=10e-4, λ_min=1e-2)
         end
         k = k + 1
     end
+    x[1:3] = x[1:3] / norm(x[1:3])
     return x, k
 end
 
@@ -652,7 +684,7 @@ function LMPersistent(Function, Jacobian, Ord, xk, data, nout, ε=1.0e-4)
         #display(abs(ordres[2] - antres))
     end
     #x = xk[1]
-    #x = x/norm(x[1:3])
+    #x[1:3] = x[1:3]/norm(x[1:3])
     return xk[1], kk, k, ordres[1]
 end
 

@@ -164,25 +164,18 @@ function benchLOVOwnoise(namecsv::String, file::String, method::String, Function
 end
 
 
-function chamadasbench() #comecar 2d com ruido em Levtest
+function chamadasbench() #comecar 3d sem ruido com 20
+  benchLOVOwnoise("LMPersnew.csv", "testenomes.txt", "LMPersistent", fline, jline, sort_line, solqual, [[1.0, 1.0], 0])
+  cd("..")
+  cd("ruido")
+  benchLOVO("LMPersnew.csv", "testenomes.txt", "LMPersistent", fline, jline, sort_line, residline, [[1.0, 1.0], 0])
+end
+
+function testetempo()
   benchLOVO("LMPersnew.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, residalgebric, [[1.0, 1.0, 1.0], 0])
   cd("..")
   cd("semruido")
   benchLOVOwnoise("LMPersnew.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, difer, [[1.0, 1.0, 1.0], 0])
-  cd("..")
-  cd("..")
-  cd("sphere3d\\semruido\\20")
-  benchLOVOwnoise("LMPersnew.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, difer, [[1.0, 1.0, 1.0, 1.0], 0])
-  cd("..")
-  cd("30")
-  benchLOVOwnoise("LMPersnew.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, difer, [[1.0, 1.0, 1.0, 1.0], 0])
-  cd("..")
-  cd("..")
-  cd("ruido\\20")
-  benchLOVO("LMPersnew.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, residalgebric, [[1.0, 1.0, 1.0, 1.0], 0])
-  cd("..")
-  cd("30")
-  benchLOVO("LMPersnew.csv", "testenomes.txt", "LMPersistent", fsphere, jsphere, sort_sphere_res, residalgebric, [[1.0, 1.0, 1.0, 1.0], 0])
 end
 
 function spherebench()
