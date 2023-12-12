@@ -1,8 +1,8 @@
 module GeometricFittingProblems
 
-using DelimitedFiles, LinearAlgebra, Plots
+using DelimitedFiles, LinearAlgebra, Plots, ForwardDiff
 
-export load_problem, solve, build_problem, solve2, visualize, plot_plane, Levenberg, LovoLM, LMPersistent
+export load_problem, solve, build_problem, solve2, visualize, plot_plane, Levenberg, LMLOVO, LMPers
 
 import Base.show
 
@@ -241,40 +241,6 @@ end
 
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
-    if probtype == "logistic"
-        println("params need to be setup as [vector, npts, nout]")
-        p = [params[1], params[2], params[3], params[4]]
-        npts = Int(params[5])
-        nout = Int(params[6])
-        t = range(-50.0, stop=50.0, length=npts)
-        x = zeros(npts)
-        y = zeros(npts)
-        sgn = sign(randn())
-        for i = 1:npts
-            x[i] = t[i]
-            y[i] = p[1] + p[2] / (1 + exp(-p[3] * x[i] + p[4]))
-        end
-        k = 1
-        iout = []
-        while k <= nout
-            i = rand([1:npts;])
-            if i ∉ iout
-                push!(iout, i)
-                k = k + 1
-            end
-        end
-        for k = 1:nout
-            y[iout[k]] = p[1] + p[2] / (1 + exp(-p[3] * x[iout[k]] + p[4])) + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
-        end
-        FileMatrix = ["name :" "logistic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1] + x[2]/(1 + exp(-x[3]*t + x[4]))"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: cubic model"]
-
-        open("logistic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
-            writedlm(io, FileMatrix)
-        end
-
-
-
-    end
     if probtype == "exponencial"
         println("params need to be setup as [vector, npts, nout]")
         p = [params[1], params[2]]
@@ -334,7 +300,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = p[1] * x[iout[k]]^3 + p[2] * x[iout[k]]^2 + p[3] * x[iout[k]] + p[4] + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
-        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t^3 + x[2]*t^2 + x[3]*t + x[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: cubic model"]
+        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1]^3 + x[2]*t[1]^2 + x[3]*t[1] + x[4] - t[2] "; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type: cubic model with noise and outliers"]
 
         open("cubic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -605,10 +571,41 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
     end
 end
 
-function Levenberg(Function, Jacobian, x, data, ε=10e-4, λ_min=1e-2)
+function diferential(model, θ, data, dim)
+
+    cl2(x) = model(x, t)
+
+    grad_model!(h, x, t_) = begin
+
+        global t = t_
+
+        return ForwardDiff.gradient(h, x)
+    end
+    (m, n) = size(data)
+    J = zeros(m, Int(dim))
+
+    for i = 1:m
+        J[i, :] = grad_model!(cl2, θ, data[i, :])
+    end
+    return J
+end
+
+
+function func(x, model, data)
+    (m, n) = size(data)
+    F = zeros(m)
+    for i = 1:m
+        F[i] = model(x, data[i, :])
+    end
+    return F
+end
+
+#Para rodar Levenberg insira o modelo, o chute inicial, os dados disponíveis do modelo e a dimensão do modelo ---- > a função func devolve o vetor do modelo aplicado nos pontos data e a função diferential gera a matriz jacobiana do modelo
+
+function Levenberg(model, x, data, dim, ε=10e-4, λ_min=1e-2)
     k = 0
-    F = Function(x, data)
-    J = Jacobian(x, data)
+    F = func(x, model, data)
+    J = diferential(model, x, data, dim)
     (m, n) = size(J)
     xn = zeros(length(x))
     Id = Matrix{Float64}(I, n, n)
@@ -618,28 +615,48 @@ function Levenberg(Function, Jacobian, x, data, ε=10e-4, λ_min=1e-2)
     while norm((J') * F) > ε && k < 50
         d = (J' * J + λ * Id) \ ((-J') * F)
         xn = x + d
-        if 0.5 * norm(Function(xn, data), 2)^2 < 0.5 * norm(Function(x, data), 2)^2
+        if 0.5 * norm(func(xn, model, data), 2)^2 < 0.5 * norm(func(x, model, data), 2)^2
             x = xn
             if λ < λ_min
                 λ = λ_min
             else
                 λ = λ / k1
             end
-            F = Function(x, data)
-            J = Jacobian(x, data)
+            F = func(x, model, data)
+            J = diferential(model, x, data, dim)
         else
             λ = λ * k2
         end
         k = k + 1
     end
-    x[1:3] = x[1:3] / norm(x[1:3])
+    #x[1:3] = x[1:3] / norm(x[1:3])
     return x, k
 end
 
-function LovoLM(Function, Jacobian, Ord, xk, data, nout, ε=1.0e-4, MAXIT=50)
-    newdata = Ord(data, xk, nout)
-    R = Function(xk, newdata[1])
-    J = Jacobian(xk, newdata[1])
+#Para rodar LMPers insira chute inicial, modelo, os pontos do problema, a dimensão, uma função de ordenação --- o arquivo de funções nos scripts possui uma função que chama sort_funcion_res, ela funciona para qualquer modelo e por ultimo a quantidade de outliers --- o chute inicial deve ser uma tupla, ou seja, algo do tipo ([1.0, 1.0, 1.0, 1.0],0) -- > o 0 é para realizar a contagem de ordenações
+function LMPers(xk, model, data, dim, ord, nout, ε=1.0e-4)
+    ordres = ord(xk[1], model, data, nout)
+    antres = 0.0
+    k = 1
+    kk = 0
+    while abs(ordres[2] - antres) > ε
+        antres = ordres[2]
+        xk = Leven(model, xk[1], ordres[1], dim)
+        kk = kk + xk[2]
+        ordres = ord(xk[1], model, data, nout)
+        k = k + 1
+    end
+    #x = xk[1]
+    #x[1:3] = x[1:3]/norm(x[1:3])
+    return xk[1], kk, k, ordres[2]
+end
+
+
+
+function LMLOVO(xk, model, data, dim, Ord, nout, ε=1.0e-4, MAXIT=50)
+    newdata = Ord(xk, model, data, nout)
+    R = func(xk, model, data)
+    J = diferential(model, xk, data, dim)
     (m, n) = size(J)
     Id = Matrix{Float64}(I, n, n)
     k = 0
@@ -651,42 +668,23 @@ function LovoLM(Function, Jacobian, Ord, xk, data, nout, ε=1.0e-4, MAXIT=50)
     while norm(J' * R, 2) >= ε && k < MAXIT
         dk = (J' * J + λ * Id) \ ((-J') * R)
         md = 0.5 * (norm((R + J * dk), 2))^2 + λ * norm(dk, 2)^2
-        Rd = Function(xk + dk, newdata[1])
+        Rd = func(xk + dk, model, newdata[1])
         ρk = (0.5 * norm(R, 2)^2 - 0.5 * norm(Rd, 2)^2) / (0.5 * norm(R, 2)^2 - md)
         if ρk < μ
             λ = λ * λ_up
         else
             λ = λ / λ_down
             xk = xk + dk
-            newdata = Ord(data, xk, nout)
-            R = Function(xk, newdata[1])
-            J = Jacobian(xk, newdata[1])
+            newdata = Ord(xk, model, data, nout)
+            R = func(xk, model, newdata[1])
+            J = diferential(model, xk, newdata[1], dim)
             k = k + 1
         end
     end
     #xk = xk/norm(xk[1:3])
-    return xk, k, newdata[1]
+    return xk, k, newdata[2]
 end
 
-#Levenberg(Function, Jacobian, x, data, ε=10e-5, λ_min=1e-4)
-
-function LMPersistent(Function, Jacobian, Ord, xk, data, nout, ε=1.0e-4)
-    ordres = Ord(data, xk[1], nout)
-    antres = 0.0
-    k = 1
-    kk = 0
-    while abs(ordres[2] - antres) > ε
-        antres = ordres[2]
-        xk = Levenberg(Function, Jacobian, xk[1], ordres[1])
-        kk = kk + xk[2]
-        ordres = Ord(data, xk[1], nout)
-        k = k + 1
-        #display(abs(ordres[2] - antres))
-    end
-    #x = xk[1]
-    #x[1:3] = x[1:3]/norm(x[1:3])
-    return xk[1], kk, k, ordres[1]
-end
 
 
 function CGAHypercircle(data; ε=1.0e-4)
@@ -777,19 +775,7 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
-function circleag(s1, s2)
-    s = externo(s1, s2)
-    A = [s[5], -s[2], s[1], -s[3], -s[6], -s[8], s[4], s[7], s[9], s[10]]
-    n1 = -A[4:6]
-    d1, d2, d3 = n1[1], n1[2], n1[3]
-    C = [d1 d2 d3; 0 d3 -d2; -d3 0 d1; d2 -d1 0]
-    α = norm(A[4:6])
-    center = [A[10]; A[1:3]]' / -C'    #talvez tenha que alterar muito
-    n1 = n1 / α
-    radius = abs((center * center' - 2 * n1' * A[7:9] / α - 2 * (n1' * center')^2))
-    u = [n1[1], n1[2], n1[3], center[1], center[2], center[3], sqrt(radius)]
-    return u
-end
+
 
 
 function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-6)
@@ -807,19 +793,6 @@ function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-6)
 end
 
 
-function externo(u, v)
-    m = length(u)
-    p = Int((m * (m - 1)) / 2)
-    w = zeros(p)
-    k = 1
-    for i = 1:m
-        for j = (i+1):m
-            w[k] = u[i] * v[j] - u[j]v[i]
-            k = k + 1
-        end
-    end
-    return w
-end
 
 function visualize(prob, a)
     pyplot()#beckendpyplot
@@ -889,77 +862,6 @@ function visualize(prob, a)
 
 end
 
-function comparsol(prob, a1, a2, a3, a4)
-    pyplot()#beckendpyplot
-    plt = plot()
-    if prob.name == "sphere2D" || prob.name == "\tsphere2D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
-        θ = [0.0:2*π/360:2*π;]
-        xs = a1[1] .+ a1[3] * cos.(θ)
-        ys = a1[2] .+ a1[3] * sin.(θ)
-        xss = a2[1] .+ a2[3] * cos.(θ)
-        yss = a2[2] .+ a2[3] * sin.(θ)
-        xk = a3[1] .+ a3[3] * cos.(θ)
-        yk = a3[2] .+ a3[3] * sin.(θ)
-        xkk = a4[1] .+ a4[3] * cos.(θ)
-        ykk = a4[2] .+ a4[3] * sin.(θ)
-
-
-        plot!(plt, xs, ys, color=:red, lab="solução L1")# legend=:outerbottomright)
-        plot!(plt, xss, yss, color=:green, lab="solução L2")# legend=:outerbottomright)
-        #plot!(plt, xk, yk, color=:blue, lab="solução L3")# legend=:outerbottomright)
-        # plot!(plt, xkk, ykk, color=:black, lab="solução L4") # legend=:outerbottomright)
-        plot!(plt, legend=:outerright)
-
-
-        #plot!(plt, x, y, color=:green, lab="solução perfeita")
-        display(plt)
-    end
-end
-
-
-
-function plot_plane(prob, m::Vector{Float64}, d::Float64, m2::Vector{Float64}, d2::Float64)
-    pyplot()#beckendpyplot
-    plt = plot()
-    plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal)
-    u1 = [m[3], 0.0, m[1]]
-    u2 = [m[1], m[3], 0.0]
-    v1 = [-m2[3], 0.0, m2[1]]
-    v2 = [m2[2], -m2[1], 0.0]
-    v1 = v1 / norm(v1)
-    v2 = v2 - (dot(v2, v1) / norm(v1)^2) * v1
-    v2 = v2 / norm(v2)
-    p0 = [d, d, d]
-    p1 = [d2, d2, d2]
-    #u = u / norm(u)
-    #h = v - (dot(v, u) / norm(u)^2) * u
-    #v = h / norm(h)
-    # Cria um meshgrid para o plano
-    x = range(-100, stop=100, length=10)
-    y = range(-100, stop=100, length=10)
-
-
-    xx, yy = [xi for xi in x, yi in y], [yi for xi in x, yi in y]
-
-
-
-
-
-    # Calcula a equação do plano
-    #z = (-m[1] .* xx .- m[2] .* yy .- d) / m[3]
-    xs = p0[1] .+ xx .* u1[1] + yy .* u2[1]
-    ys = p0[2] .+ xx .* u1[2] + yy .* u2[2]
-    zs = p0[3] .+ xx .* u1[3] + yy .* u2[3]
-    xn = p1[1] .+ xx .* v1[1] + yy .* v2[1]
-    yn = p1[2] .+ xx .* v1[2] + yy .* v2[2]
-    zn = p1[3] .+ xx .* v1[3] + yy .* v2[3]
-
-
-    # Plota o plano
-    wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:blue, label="CGA")
-    wireframe!(xn, yn, zn, aspect_ratio=:equal, color=:red, label="CGdA")
-end
 
 
 
