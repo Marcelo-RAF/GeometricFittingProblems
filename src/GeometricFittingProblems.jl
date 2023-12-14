@@ -241,6 +241,115 @@ end
 
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
+    if probtype == "quadratic"
+        println("a limit vector is need to discretize the interval, for example, [-10.0,10.0]")
+        println("params need to be setup as [coefs of A, b and c,size_prob,npts,nout]")
+        nout = Int(params[end])
+        npts = Int(params[end-1])
+        size_prob = Int(params[end-2])
+        dim = length(params[1:end-3])
+        n = size_prob
+        mA = "["
+        sA = [" " for i=1:n,j=1:n]
+        A = zeros(n,n)
+        b = zeros(n)
+        c = 0.0
+        k = 1
+        for i=1:n
+            for j=i:n
+                A[i,j] = params[k]
+                A[j,i] = A[i,j]
+                sA[i,j] = " t[$(k)] "
+                sA[j,i] = sA[i,j]
+                k += 1
+            end
+        end
+        for i=1:n
+            for j=1:n
+                mA = mA*sA[i,j]
+                if j==n
+                    if i==n
+                        mA = mA*"]"
+                    else
+                        mA = mA*";"
+                    end
+                end
+            end
+        end
+        mb = "["
+        for i=1:n-1
+            mb = mb*" t[$(k)],"
+            b[i] = params[k]
+            k += 1
+        end
+        mb = mb*"t[$(k)]]"
+        b[n] = params[k]
+        k += 1
+        mc = " t[$(k)]"
+        c = params[k]
+        m(x) = x'*A*x+b'*x+c
+        #display(A)
+        model = "(x,t) -> x'*$(mA)*x + $(mb)'*x + $(mc)"
+       r = (limit[2]-limit[1])/(npts-1)
+       x = rand(limit[1]:r:limit[2],npts)
+       for i=1:n-1
+           x = [x rand(limit[1]:r:limit[2],npts)]
+       end
+       #display(x)
+       #global coefs = params[1:end-3]
+       y = zeros(npts)
+       #
+       for i=1:npts
+           y[i] = m(x[i,:])
+       end
+
+       k = 1
+       iout = []
+       while k<=nout
+           i = rand([1:npts;])
+           if i ∉ iout
+               push!(iout,i)
+               k = k+1
+           end
+       end
+
+       for k = 1:nout
+           x[iout[k],:]=x[iout[k],:]+randn(size_prob)
+           y[iout[k]]=y[iout[k]]+randn()
+       end
+
+       ## A(t) = begin
+        #         mA = zeros(size_prob,size_prob)
+        #         k = 1
+        #         for i=1:size_prob
+        #             for j=i:size_prob
+        #                 mA[i,j] = t[k]
+        #                 mA[j,i] = t[k]
+        #                 k += 1
+        #             end
+        #         end
+        #         return mA
+        #     end
+        # b(t) = begin
+        #     vb = zeros(size_prob)
+        #     k = Int(((size_prob^2+size_prob)/2)+1)
+        #         for i=1:size_prob
+        #             vb[i] = t[k]
+        #             k += 1
+        #         end
+        #         return vb
+        #     end
+        #     c(t) = t[Int(((size_prob^2+size_prob)/2)+size_prob+1)]
+        # 
+        # model = "(x,t) -> x'*A(t)*x + b(t)'*x + c(t)"
+
+
+        FileMatrix = ["name :" "Quadratic";"data :" [[x y]]; "npts :" npts;"nout :" nout; "model :" model;"dim :"  dim; "cluster :" "false"; "noise :" "false"; "solution :" [params[1:end-3]]; "description :" "none"]
+
+        open("quadratic_$(params[1])_$(params[end-3])_$(size_prob)_$(dim)_$(npts)_$(nout).csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+    end
     if probtype == "exponencial"
         println("params need to be setup as [vector, npts, nout]")
         p = [params[1], params[2]]
