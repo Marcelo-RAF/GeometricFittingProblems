@@ -4,7 +4,7 @@ using BenchmarkTools, CSV, DataFrames
 
 
 function testes(x) #esse arquivo está na pasta resultsLM\Cubic\semruido
-  prob = load_problem("cubic_0.1_-7.7_-4.0_10.csv")
+  prob = load_problem("cubic_0.1_4.1_-1.1_15.csv")
   (m, n) = size(prob.data)
   s = zeros(m)
   cl2(x) = invokelatest(prob.model(x, t))
@@ -104,7 +104,7 @@ function benchmk(namecsv::String, file::String, method::String, funcao, jacobian
       try
         #x = Levenberg(fcubic, jcubic, [1.0, 1.0, 1.0, 1.0], prob.data)
         s = LMPersistent(funcao, jacobiana, Ord, xk, prob.data, prob.nout)
-        a = @benchmark LMPersistent($funcao, $jacobiana, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 70
+        a = @benchmark LMPersistent($funcao, $jacobiana, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 80
         #ndif = norm(prob.solution - s[1])
         k = k + 1
         println(k)
@@ -139,7 +139,7 @@ function benchmk(namecsv::String, file::String, method::String, funcao, jacobian
       try
         #x = Levenberg(fcubic, jcubic, [1.0, 1.0, 1.0, 1.0], prob.data)
         s = LovoLM(funcao, jacobiana, Ord, xk, prob.data, prob.nout)
-        a = @benchmark LovoLM($funcao, $jacobiana, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 70
+        a = @benchmark LovoLM($funcao, $jacobiana, $Ord, $xk, $prob.data, $prob.nout) samples = 100 seconds = 80
         k = k + 1
         println(k)
         row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3], median(a.times) / 1e9)])
@@ -160,9 +160,3 @@ function benchmk(namecsv::String, file::String, method::String, funcao, jacobian
     #close(csv_file_benchmark)
   end
 end
-
-
-
-
-
-

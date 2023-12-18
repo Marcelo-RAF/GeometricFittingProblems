@@ -1,18 +1,18 @@
-function fline(x,data)
+function fline(x, data)
   (m, n) = size(data)
   f = zeros(m)
-  for i=1:m
-    f[i] = x[1]*data[i,1] + x[2] - data[i,2]
+  for i = 1:m
+    f[i] = x[1] * data[i, 1] + x[2] - data[i, 2]
   end
   return f
 end
 
-function jline(x,data)
+function jline(x, data)
   (m, n) = size(data)
   tam = length(x)
   J = zeros(m, tam)
   J[:, 1] = data[:, 1]
-  J[:,2] = ones(m)
+  J[:, 2] = ones(m)
   return J
 end
 
@@ -147,6 +147,30 @@ function jexponencial(x, data)
   return J
 end
 
+function sort_funcion_res(x, model, data, nout)
+  P = data
+  (n, m) = size(data)
+  v = zeros(n)
+  for i = 1:n
+    v[i] = (prob.model(x, prob.data[i, :]))^2
+  end
+  indtrust = [1:n;]
+  for i = 1:n-nout+1
+    for j = i+1:n
+      if v[i] > v[j]
+        aux = v[j]
+        v[j] = v[i]
+        v[i] = aux
+        aux2 = indtrust[j]
+        indtrust[j] = indtrust[i]
+        indtrust[i] = aux2
+      end
+    end
+  end
+  #    println(indtrust[n-nout+1:n])
+  return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
+end
+
 function sort_exponencial(P, x, nout)
   n = length(P[:, 1])
   m = length(P[1, :])
@@ -172,7 +196,7 @@ function sort_exponencial(P, x, nout)
 end
 
 
-function sort_line(P,x,nout)
+function sort_line(P, x, nout)
   n = length(P[:, 1])
   m = length(P[1, :])
   v = zeros(n)
@@ -256,7 +280,7 @@ function sort_plane_res(P, x, nout)
     for j = 1:m
       v[i] = v[i] + P[i, j] * x[j]
     end
-    v[i] = (v[i] + x[end])^2
+    v[i] = (v[i] - x[end])^2
   end
   indtrust = [1:n;]
   for i = 1:n-nout+1

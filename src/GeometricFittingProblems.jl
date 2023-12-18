@@ -250,75 +250,75 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         dim = length(params[1:end-3])
         n = size_prob
         mA = "["
-        sA = [" " for i=1:n,j=1:n]
-        A = zeros(n,n)
+        sA = [" " for i = 1:n, j = 1:n]
+        A = zeros(n, n)
         b = zeros(n)
         c = 0.0
         k = 1
-        for i=1:n
-            for j=i:n
-                A[i,j] = params[k]
-                A[j,i] = A[i,j]
-                sA[i,j] = " t[$(k)] "
-                sA[j,i] = sA[i,j]
+        for i = 1:n
+            for j = i:n
+                A[i, j] = params[k]
+                A[j, i] = A[i, j]
+                sA[i, j] = " t[$(k)] "
+                sA[j, i] = sA[i, j]
                 k += 1
             end
         end
-        for i=1:n
-            for j=1:n
-                mA = mA*sA[i,j]
-                if j==n
-                    if i==n
-                        mA = mA*"]"
+        for i = 1:n
+            for j = 1:n
+                mA = mA * sA[i, j]
+                if j == n
+                    if i == n
+                        mA = mA * "]"
                     else
-                        mA = mA*";"
+                        mA = mA * ";"
                     end
                 end
             end
         end
         mb = "["
-        for i=1:n-1
-            mb = mb*" t[$(k)],"
+        for i = 1:n-1
+            mb = mb * " t[$(k)],"
             b[i] = params[k]
             k += 1
         end
-        mb = mb*"t[$(k)]]"
+        mb = mb * "t[$(k)]]"
         b[n] = params[k]
         k += 1
         mc = " t[$(k)]"
         c = params[k]
-        m(x) = x'*A*x+b'*x+c
+        m(x) = x' * A * x + b' * x + c
         #display(A)
         model = "(x,t) -> x'*$(mA)*x + $(mb)'*x + $(mc)"
-       r = (limit[2]-limit[1])/(npts-1)
-       x = rand(limit[1]:r:limit[2],npts)
-       for i=1:n-1
-           x = [x rand(limit[1]:r:limit[2],npts)]
-       end
-       #display(x)
-       #global coefs = params[1:end-3]
-       y = zeros(npts)
-       #
-       for i=1:npts
-           y[i] = m(x[i,:])
-       end
+        r = (limit[2] - limit[1]) / (npts - 1)
+        x = rand(limit[1]:r:limit[2], npts)
+        for i = 1:n-1
+            x = [x rand(limit[1]:r:limit[2], npts)]
+        end
+        #display(x)
+        #global coefs = params[1:end-3]
+        y = zeros(npts)
+        #
+        for i = 1:npts
+            y[i] = m(x[i, :])
+        end
 
-       k = 1
-       iout = []
-       while k<=nout
-           i = rand([1:npts;])
-           if i ∉ iout
-               push!(iout,i)
-               k = k+1
-           end
-       end
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
 
-       for k = 1:nout
-           x[iout[k],:]=x[iout[k],:]+randn(size_prob)
-           y[iout[k]]=y[iout[k]]+randn()
-       end
+        for k = 1:nout
+            x[iout[k], :] = x[iout[k], :] + randn(size_prob)
+            y[iout[k]] = y[iout[k]] + randn()
+        end
 
-       ## A(t) = begin
+        ## A(t) = begin
         #         mA = zeros(size_prob,size_prob)
         #         k = 1
         #         for i=1:size_prob
@@ -344,7 +344,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         # model = "(x,t) -> x'*A(t)*x + b(t)'*x + c(t)"
 
 
-        FileMatrix = ["name :" "Quadratic";"data :" [[x y]]; "npts :" npts;"nout :" nout; "model :" model;"dim :"  dim; "cluster :" "false"; "noise :" "false"; "solution :" [params[1:end-3]]; "description :" "none"]
+        FileMatrix = ["name :" "Quadratic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" model; "dim :" dim; "cluster :" "false"; "noise :" "false"; "solution :" [params[1:end-3]]; "description :" "none"]
 
         open("quadratic_$(params[1])_$(params[end-3])_$(size_prob)_$(dim)_$(npts)_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -394,7 +394,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         sgn = sign(randn())
         for i = 1:npts
             x[i] = t[i]
-            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] #+ (1.0+2*rand()) * 7.0*sgn
+            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] + (1.0 + 2 * rand()) * 7.0 * sgn
         end
         k = 1
         iout = []
@@ -409,7 +409,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = p[1] * x[iout[k]]^3 + p[2] * x[iout[k]]^2 + p[3] * x[iout[k]] + p[4] + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
-        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1]^3 + x[2]*t[1]^2 + x[3]*t[1] + x[4] - t[2] "; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type: cubic model with noise and outliers"]
+        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1]^3 + x[2]*t[1]^2 + x[3]*t[1] + x[4] - t[2] "; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type: cubic model with noise and outliers"]
 
         open("cubic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -504,13 +504,14 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         d = dot(vn, p0)
         vn = push!(vn, d)
         ruid = randn(3, npts)
+        sgn = sign(randn())
         for i = 1:npts
             for j = 1:npts
                 λ = rand(pp)
                 μ = rand(pp)
-                x[i] = p0[1] + λ * u[1] + μ * v[1] #+ ruid[1,i]
-                y[i] = p0[2] + λ * u[2] + μ * v[2] #+ ruid[2,i]
-                z[i] = p0[3] + λ * u[3] + μ * v[3] #+ ruid[3,i]
+                x[i] = p0[1] + λ * u[1] + μ * v[1] #+ (1.0+2*rand()) * 7.0*sgn#+ ruid[1,i]
+                y[i] = p0[2] + λ * u[2] + μ * v[2] #+ (1.0+2*rand()) * 7.0*sgn#+ ruid[2,i]
+                z[i] = p0[3] + λ * u[3] + μ * v[3] #+ (1.0+2*rand()) * 7.0*sgn#+ ruid[3,i]
             end
         end
         nout = Int(params[11])
@@ -529,7 +530,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λ*u + μ*v"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
+        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1] + x[2]*t[2] + x[3]*t[3] + x[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
 
         open("plane_$(vn[1])_$(vn[2])_$(vn[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -711,7 +712,7 @@ end
 
 #Para rodar Levenberg insira o modelo, o chute inicial, os dados disponíveis do modelo e a dimensão do modelo ---- > a função func devolve o vetor do modelo aplicado nos pontos data e a função diferential gera a matriz jacobiana do modelo
 
-function Levenberg(model, x, data, dim, ε=10e-4, λ_min=1e-2)
+function Levenberg(model, x, data, dim, ε=10e-4, λ_min=0.7)
     k = 0
     F = func(x, model, data)
     J = diferential(model, x, data, dim)
@@ -738,7 +739,7 @@ function Levenberg(model, x, data, dim, ε=10e-4, λ_min=1e-2)
         end
         k = k + 1
     end
-    #x[1:3] = x[1:3] / norm(x[1:3])
+    #x = x/norm(x[1:3])
     return x, k
 end
 
@@ -750,14 +751,14 @@ function LMPers(xk, model, data, dim, ord, nout, ε=1.0e-4)
     kk = 0
     while abs(ordres[2] - antres) > ε
         antres = ordres[2]
-        xk = Leven(model, xk[1], ordres[1], dim)
+        xk = Levenberg(model, xk[1], ordres[1], dim)
         kk = kk + xk[2]
         ordres = ord(xk[1], model, data, nout)
         k = k + 1
     end
     #x = xk[1]
     #x[1:3] = x[1:3]/norm(x[1:3])
-    return xk[1], kk, k, ordres[2]
+    return xk[1], kk, k, ordres[1], ordres[2]
 end
 
 
@@ -790,7 +791,7 @@ function LMLOVO(xk, model, data, dim, Ord, nout, ε=1.0e-4, MAXIT=50)
             k = k + 1
         end
     end
-    #xk = xk/norm(xk[1:3])
+    xk = xk / norm(xk[1:3])
     return xk, k, newdata[2]
 end
 
