@@ -3,18 +3,16 @@ using BenchmarkTools, CSV, DataFrames
 
 
 
-function testes(x) #esse arquivo está na pasta resultsLM\Cubic\semruido
+function testes() #esse arquivo está na pasta resultsLM\Cubic\semruido
   prob = load_problem("cubic_0.1_4.1_-1.1_15.csv")
-  (m, n) = size(prob.data)
-  s = zeros(m)
-  cl2(x) = invokelatest(prob.model(x, t))
-  for i = 1:m
-    s[i] = invokelatest(prob.model, x, prob.data[i, :])
-  end
-  k = LMPers(([1.0, 1.0, 1.0, 1.0], 0), prob.model, prob.data, prob.dim, sort_funcion_res, prob.nout)
-  return k
+  teste(prob)
+  #k = LMPers(([1.0, 1.0, 1.0, 1.0], 0), $(prob.model), $(prob.data), $(prob.dim), sort_funcion_res, $(prob.nout))
+  #return k
 end
 
+function teste(P::FitProbType)
+  display(P)
+end
 
 function benchmarklovo(namecsv::String, file::String, method::String, Ord, xk)
   if method == "LMPersistent"
