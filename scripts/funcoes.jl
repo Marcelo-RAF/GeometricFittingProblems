@@ -152,7 +152,7 @@ function sort_funcion_res(x, model, data, nout)
   (n, m) = size(data)
   v = zeros(n)
   for i = 1:n
-    v[i] = (prob.model(x, prob.data[i, :]))^2
+    v[i] = (model(x, data[i, :]))^2
   end
   indtrust = [1:n;]
   for i = 1:n-nout+1

@@ -1,13 +1,13 @@
 using BenchmarkTools, CSV, DataFrames
 
 
-
+probt = load_problem("cubic_0.1_4.1_-1.1_15.csv")
 
 function testes() #esse arquivo está na pasta resultsLM\Cubic\semruido
   prob = load_problem("cubic_0.1_4.1_-1.1_15.csv")
   teste(prob)
-  #k = LMPers(([1.0, 1.0, 1.0, 1.0], 0), $(prob.model), $(prob.data), $(prob.dim), sort_funcion_res, $(prob.nout))
-  #return k
+  k = LMPers(([1.0, 1.0, 1.0, 1.0], 0), prob.model, prob.data, prob.dim, sort_funcion_res, prob.nout)
+  return k
 end
 
 function teste(P::FitProbType)
@@ -25,15 +25,16 @@ function benchmarklovo(namecsv::String, file::String, method::String, Ord, xk)
     for probname ∈ set_problem
       log_file = open("logpersistentlovo.txt", "w")
       prob = load_problem(probname)
+      display(prob.dim)
       solved = false
       try
         #x = Levenberg(fcubic, jcubic, [1.0, 1.0, 1.0, 1.0], prob.data)
         s = LMPers(xk, prob.model, prob.data, prob.dim, Ord, prob.nout)
-        a = @benchmark LMPers($xk, $prob.model, $prob.data, $prob.dim, $Ord, $prob.nout) samples = 100 seconds = 70
+        #a = @benchmark LMPers($xk, $prob.model, $prob.data, $prob.dim, $Ord, $prob.nout) samples = 100 seconds = 70
         #ndif = norm(prob.solution - s[1])
         k = k + 1
         println(k)
-        row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3], s[4], median(a.times) / 1e9)])
+        row = DataFrame([(probname, prob.npts, prob.nout, prob.solution, s[1], s[2], s[3], s[4])])#, median(a.times) / 1e9)])
         df = vcat(df, row)
         #benchmark_row = DataFrame([(probname, prob.npts, prob.nout, minimum(a.times) / 1e9, median(a.times) / 1e9, maximum(a.times) / 1e9)])
         #benchmark_df = vcat(benchmark_df, benchmark_row)
