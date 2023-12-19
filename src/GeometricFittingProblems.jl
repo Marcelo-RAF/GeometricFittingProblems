@@ -2,7 +2,7 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots, ForwardDiff
 
-export load_problem, solve, build_problem, solve2, visualize, plot_plane, Levenberg, LMLOVO, LMPers
+export load_problem, solve, build_problem, solve2, visualize, plot_plane, Levenberg, LMLOVO, LMPers, FitProbType, FitOutputType, sort_funcion_res
 
 import Base.show
 
@@ -885,6 +885,29 @@ function CGAHypercircle(data; ε=1.0e-4)
     return u
 end
 
+function sort_funcion_res(x, model, data, nout)
+    P = data
+    (n, m) = size(data)
+    v = zeros(n)
+    for i = 1:n
+        v[i] = (model(x, data[i, :]))^2
+    end
+    indtrust = [1:n;]
+    for i = 1:n-nout+1
+        for j = i+1:n
+            if v[i] > v[j]
+                aux = v[j]
+                v[j] = v[i]
+                v[i] = aux
+                aux2 = indtrust[j]
+                indtrust[j] = indtrust[i]
+                indtrust[i] = aux2
+            end
+        end
+    end
+    #    println(indtrust[n-nout+1:n])
+    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
+end
 
 
 
