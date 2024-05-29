@@ -1,8 +1,8 @@
 module GeometricFittingProblems
 
-using DelimitedFiles, LinearAlgebra, Plots, ForwardDiff
+using DelimitedFiles, LinearAlgebra, Plots
 
-export load_problem, solve, build_problem, solve2, visualize, plot_plane, Levenberg, LMLOVO, LMPers, FitProbType, FitOutputType, sort_funcion_res
+export load_problem, solve, build_problem, visualize, FitProbType, FitOutputType, sort_funcion_res, AACGA, AGCGA, ICGA, LOVOCGA
 
 import Base.show
 
@@ -65,12 +65,28 @@ function load_problem(filename::String)
     end
 end
 
+"""
+    AGCGA(data::Matrix, Method::String)
 
-function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esferas
+Essa função ajusta pontos do espaço R^n, dentro do conjunto {hiperplano, hiperesfera, hipercírculo, hiperreta} por um modelo geométrico aproximado de um método de Álgebra Geométrica no Epaço Conformal que minimiza as distâncias dos pontos dados a um dos objetos supracitados. Os dados de entrada são: uma matriz em que cada linha é um vetor do espaço euclidiano e o objeto a ser encontrado. 
+
+# Examples
+```
+julia-repl
+julia> prob = load_problem("toy.csv")
+julia> AGCGA(prob.data)
+
+returns a vector
+```
+"""
+
+
+function AGCGA(data, object::String, ε=1.0e-5) #algoritmo dorst esferas
     (N, n) = size(data)
-    D = [data'; ones(1, N)]
-    v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:N]
-    D = [D; v']
+    #D = [data'; ones(1, N)]
+    #v = [0.5 * norm(data[1:n, i], 2)^2 for i = 1:N]
+    v = [0.5 * norm(data[i, :], 2)^2 for i = 1:N]
+    D = [data'; v'; ones(1, N)]
     J = copy(D')
     H = -copy(J[:, n+1])
     J[:, n+1] = -J[:, n+2]
@@ -81,36 +97,29 @@ function CGAHypersphere(data, method::String, ε=1.0e-5) #algoritmo dorst esfera
     DDt[:, n+2] = aux
     p = (1.0 / N)
     P = p .* (DDt)
-    if method == "eigenvector"
-        F = eigen(P)
-        indmin = 1
-        #println(F.values)
-        valmin = F.values[1]
-        for i = 2:n
-            if abs(valmin) > abs(F.values[i])
-                if F.values[i] > -ε
-                    indmin = i
-                    valmin = F.values[i]
-                end
+    F = eigen(P)
+    indmin = 1
+    valmin = F.values[1]
+    for i = 2:n
+        if abs(valmin) > abs(F.values[i])
+            if F.values[i] > -ε
+                indmin = i
+                valmin = F.values[i]
             end
         end
-        if valmin < -ε
-            error("P does not have postive eigen value!")
-        end
-        #xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
-        #center = xnorm[1:end-2]
-        #display(F)
-        return F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
-    elseif method == "nullspace"
-
-        P[end, :] = zeros(n + 2)
-        np = nullspace(P)
-
-        #npnorm = np / np[end-1]
-        #centernp = npnorm[1:end-2]
-        #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))
-        return np
     end
+    if valmin < -ε
+        error("P does not have postive eigen value!")
+    end
+    #xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
+    #center = xnorm[1:end-2]
+    #hhh = push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
+    if object == "sphere" || "plane"
+        return F.vectors[:, indmin]
+    end
+    if object == "line" || "circle"
+        return F.vectors[:, indmin], F.vectors[:, indmin+1]
+    end #hhh push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
 end
 
 function simetrica(D)
@@ -129,52 +138,118 @@ function simetrica(D)
     return H
 end
 
+"""
+    AGCGA(data::Matrix)
 
-function hildebran(data, method::String, ε=1.0e-5)
+Essa função ajusta pontos do espaço R^n, dentro do conjunto {hiperplano, hiperesfera, hipercírculo, hiperreta} por um modelo algébrico aproximado de um método de Álgebra Geométrica no Epaço Conformal que minimiza as distâncias dos pontos dados a um dos objetos supracitados. Os dados de entrada são: uma matriz em que cada linha é um vetor do espaço euclidiano e o objeto a ser encontrado. 
+
+# Examples
+```
+julia-repl
+julia> prob = load_problem("toy.csv")
+julia> AACGA(prob.data)
+
+returns a vector
+```
+"""
+
+
+function AACGA(data, object::String, ε=1.0e-5)
     (N, n) = size(data)
     v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
-    D = [data'; v'; -ones(1, N)]
+    D = [data'; -ones(1, N); v']
     Dd = simetrica(D)
-    Dd = 1.0 / N * Dd #apagar
-    if method == "eigenvector"
-        F = eigen(Dd)
-        indmin = 1
-        valmin = F.values[1]
-        for i = 2:n
-            if abs(valmin) > abs(F.values[i])
-                if F.values[i] > -ε
-                    indmin = i
-                    valmin = F.values[i]
-                end
+    F = eigen(Dd)
+    indmin = 1
+    valmin = F.values[1]
+    for i = 2:n
+        if abs(valmin) > abs(F.values[i])
+            if F.values[i] > -ε
+                indmin = i
+                valmin = F.values[i]
             end
         end
-        if valmin < -ε
-            error("P does not have postive eigen value!")
+    end
+    if valmin < -ε
+        error("P does not have postive eigen value!")
+    end
+    if object == "sphere" || "plane"
+        return F.vectors[:, indmin]
+    end
+    if object == "line" || "circle"
+        return F.vectors[:, indmin], F.vectors[:, indmin+1]
+    end
+    #xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
+    #center = xnorm[1:end-2]
+
+    #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
+end
+
+"""
+    ICGA(data::Matrix, object::String)
+
+Essa função ajusta pontos do espaço R^n, dentro do conjunto {hiperplano, hiperesfera, hipercírculo, hiperreta} que minimiza as distâncias tangenciais para esferas e círculos e as distâncias ortogonais para planos e retas. Os dados de entrada são: conjunto de pontos do espaço euclidiano e o objeto que deve ser encontrado. 
+
+# Examples
+```
+julia-repl
+julia> prob = load_problem("toy.csv")
+julia> ICGA(prob.data, "sphere")
+
+returns a vector
+```
+"""
+
+function ICGA(data, object::String)
+    (N, n) = size(data)
+    v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
+    D = [data'; -ones(1, N); v']
+    Dd = simetrica(D)
+    if nullspace(Dd) == zeros(n + 2, 0)
+        if object == "sphere"
+            Dd[end, :] .= 0.0
+            np = nullspace(Dd)
+            #p = np / np[end]
+            #centernp = np[1:end-2]
+            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+            return np
         end
-        xnorm1 = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
-        center1 = xnorm1[1:end-2]
-
-        #xnorm = (1.0 / (F.vectors[:, indmin][end-1])) * F.vectors[:, indmin]
-        #center = xnorm[1:end-2]
-
-        #display(F)
-        return F.vectors[:, indmin] #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
-    elseif method == "nullspace"
-        Dd[end-1, :] = zeros(n + 2)
-        #Dd[2, :] = zeros(n + 2)
-        np = nullspace(Dd)
-
-        #npnew = [np[1], np[2], np[3], np[5], np[4]]
-        #npnorm = np / np[3]
-        #centernp = npnorm[1:end-2]
-        #display(Dd)
-        return np #push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end]))
+        if object == "plane"
+            B = Dd[1:end-2, 1:end-2]
+            u = Dd[1:end-2, end-1]
+            a = Dd[end-1, end-1]
+            H = B - (u * u') / a
+            F = eigen(H)
+            vn = F.vectors[:, 1]
+            d = -(u' * vn) / a
+            π = [vn; d]
+            return π
+        end
+        if object == "circle"
+            B = Dd[1:end-2, 1:end-2]
+            u = Dd[1:end-2, end-1]
+            a = Dd[end-1, end-1]
+            H = B - (u * u') / a
+            F = eigen(H)
+            vn = F.vectors[:, 1]
+            d = -(u' * vn) / a
+            π = [vn; d]
+            Px = copy(Dd)
+            Px[end, :] .= 0.0
+            np = nullspace(Px)
+            #np = np / np[end]
+            #centernp = np[1:end-2]
+            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+            return π, np
+        end
+    else
+        return nullspace(Dd)
     end
 end
 
-
 function conformalsort(P, x, nout)
     (m, n) = size(P)
+    #display((m,n))
     h = zeros(m)
     D = [P'; ones(1, m)]
     v = [0.5 * norm(D[1:n, i], 2)^2 for i = 1:m]
@@ -203,25 +278,41 @@ function conformalsort(P, x, nout)
     return P[indtrust[1:m-nout], :], sum(h[1:m-nout])
 end
 
+"""
+LOVOCGA(data, nout, θ, nome, ε=1.0e-5)
+
+Essa função recebe de parâmetros de entrada pontos de um espaço euclidiano, uma quantidade de pontos não confiáveis, um chute inicial e aproximação desejada, se é algébrica ou geométrica. A função funciona eliminando os outliers por meio do número de pontos não confiáveis do problema e retornando a melhor aproximação possível dentro do conjunto {hiperplanos, hipercírculos, hiperesferas, hiperetas.} 
+
+# Examples
+```
+julia-repl
+julia> prob = load_problem("toy.csv")
+julia> LOVOCGA(prob.data, prob.nout, x_0, "algebraic")
+
+returns a vector
+```
+"""
 
 
-function LOVOConformal(data, nout, θ, nome, ε=1.0e-5)
+function LOVOCGA(data, nout, θ, name, ε=1.0e-5)
     ordres = conformalsort(data, θ, nout)
     k = 1
     antres = 0.0
-    while abs(ordres[2] - antres) > ε
+    while abs(ordres[2] - antres) > ε && k < 40
         antres = ordres[2]
-        if nome == "algebraic"
-            θ = hildebran(ordres[1], "nullspace")
+        if name == "AACGA"
+            θ = AACGA(ordres[1])
         end
-        if nome == "geometric"
-            θ = CGAHypersphere(ordres[1], "nullspace")
+        if name == "AGCGA"
+            θ = AGCGA(ordres[1])
+            #display(θ)
         end
         ordres = conformalsort(data, θ, nout)
         k = k + 1
     end
-    return θ, k
+    return θ, k, ordres[1], ordres[2]
 end
+
 
 
 function solve(prob::FitProbType, method::String)
@@ -239,6 +330,20 @@ function solve(prob::FitProbType, method::String)
 end
 
 
+"""
+build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
+
+Essa função recebe de parâmetros de entrada pontos de um espaço euclidiano, uma quantidade de pontos não confiáveis, um chute inicial e aproximação desejada, se é algébrica ou geométrica. A função funciona eliminando os outliers por meio do número de pontos não confiáveis do problema e retornando a melhor aproximação possível dentro do conjunto {hiperplanos, hipercírculos, hiperesferas, hiperetas.} 
+
+# Examples
+```
+julia-repl
+julia> prob = load_problem("toy.csv")
+julia> LOVOConformal(prob.data, prob.nout, x_0, "algebraic")
+
+returns a vector
+```
+"""
 
 function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
     if probtype == "quadratic"
@@ -312,7 +417,6 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
                 k = k + 1
             end
         end
-
         for k = 1:nout
             x[iout[k], :] = x[iout[k], :] + randn(size_prob)
             y[iout[k]] = y[iout[k]] + randn()
@@ -377,7 +481,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])#rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
 
-        FileMatrix = ["name :" "exponencial"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*exp(-x[2]*t) "; "dim :" 2; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type: exponencial function"]
+        FileMatrix = ["name :" "exponencial"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*exp(-t[2]*x) "; "dim :" 2; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type: exponencial function"]
 
         open("exponencial_$(p[1])_$(p[2])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -409,7 +513,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = p[1] * x[iout[k]]^3 + p[2] * x[iout[k]]^2 + p[3] * x[iout[k]] + p[4] + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
-        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1]^3 + x[2]*t[1]^2 + x[3]*t[1] + x[4] - t[2] "; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type: cubic model with noise and outliers"]
+        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*x[1]^3 + t[2]*x[1]^2 + t[3]*x[1] + t[4] "; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type: cubic model with noise and outliers"]
 
         open("cubic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -426,7 +530,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         sgn = sign(randn())
         for i = 1:npts
             x[i] = t[i]
-            y[i] = p[1] * x[i] + p[2] + (1.0 + 2 * rand()) * 7.0 * sgn
+            y[i] = p[1] * x[i] + p[2] #+ (1.0 + 2 * rand()) * 7.0 * sgn
         end
         k = 1
         iout = []
@@ -438,10 +542,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            y[iout[k]] = p[1] * x[iout[k]] + p[2] + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            y[iout[k]] = p[1] * x[iout[k]] + p[2] + randn() * 50 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
-        FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t + x[2]"; "dim :" 2; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type2: line model"]
+        FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*x + t[2]"; "dim :" 2; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: line model"]
 
         open("line2d_$(p[1])_$(p[2])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -499,6 +603,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
+        w = zeros(npts)
         vn = cross(u, v)
         vn = vn / norm(vn)
         d = dot(vn, p0)
@@ -509,9 +614,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             for j = 1:npts
                 λ = rand(pp)
                 μ = rand(pp)
-                x[i] = p0[1] + λ * u[1] + μ * v[1] #+ (1.0+2*rand()) * 7.0*sgn#+ ruid[1,i]
-                y[i] = p0[2] + λ * u[2] + μ * v[2] #+ (1.0+2*rand()) * 7.0*sgn#+ ruid[2,i]
-                z[i] = p0[3] + λ * u[3] + μ * v[3] #+ (1.0+2*rand()) * 7.0*sgn#+ ruid[3,i]
+                x[i] = p0[1] + λ * u[1] + μ * v[1] + ruid[1, i] #(1.0+2*rand()) * 7.0*sgn#
+                y[i] = p0[2] + λ * u[2] + μ * v[2] + ruid[2, i]
+                z[i] = p0[3] + λ * u[3] + μ * v[3] + ruid[3, i]
             end
         end
         nout = Int(params[11])
@@ -530,7 +635,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1] + x[2]*t[2] + x[3]*t[3] + x[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
+        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1] + x[2]*t[2] + x[3]*t[3] + t[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
 
         open("plane_$(vn[1])_$(vn[2])_$(vn[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -582,13 +687,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         for k = 1:nout
             w[:, iout[k]] = w[:, iout[k]] + [rand([-0.5*r:0.1:0.5*r;]), rand([-0.5*r:0.1:0.5*r;]), rand([-0.5*r:0.1:0.5*r;])]
         end
-        #G = randn(3, npts)
+        G = randn(3, npts)
         for i = 1:npts
             x[i] = w[1, i] #+ G[1, i]
             y[i] = w[2, i] #+ G[2, i]
             z[i] = w[3, i] #+ G[3, i]
         end
-        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vnc, r)]; "description :" [[u, v]]]
+        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> ( (x[1] - t[4])*t[1] +(x[2]-t[5])*t[2] +(x[3]-t[6])*t[3])^2 + ((x[1]-t[4])^2 + (x[2]-t[5])^2 + (x[3]-t[6])^2 - t[7]^2)^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vnc, r)]; "description :" [[u, v]]]
 
         open("circle3D_$(c[1])_$(c[2])_$(c[3])_$(r)_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -601,12 +706,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         npts = Int(params[4])
         x = zeros(npts)
         y = zeros(npts)
+        z = zeros(npts)
         ruid = randn(2, npts)
         θ = range(0, stop=2π, length=npts) #Int(ceil(npts/2)))
         #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
         for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) + ruid[1, k]
-            y[k] = c[2] + r * sin(θ[k]) + ruid[2, k]
+            x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]
+            y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k]
         end
         nout = Int(params[5])
         k = 1
@@ -624,7 +730,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             x[iout[k]] = x[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])
             y[iout[k]] = y[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
-        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - x[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
+        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
 
         open("sphere2D_$(c[1])_$(c[2])_$(c[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -639,6 +745,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
+        w = zeros(npts)
         θ = range(0, stop=2π, length=npts)
         φ = range(0, stop=π, length=npts)
         #φ2 = range(5π/6, stop=π, length=npts)
@@ -651,9 +758,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         #  h = Int(npts/2) + 1
         # end
         for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) #+ rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) #+ rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) #+ rd[3, k]
+            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
+            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
+            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
         end
         nout = Int(params[6])
         k = 1
@@ -666,14 +773,11 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            dx = rand() * 0.2 * r
-            dy = rand() * 0.2 * r
-            dz = rand() * 0.2 * r
-            x[iout[k]] = x[iout[k]] + dx #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;]) 
-            y[iout[k]] = y[iout[k]] + dy #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
-            z[iout[k]] = z[iout[k]] + dz #rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
+            x[iout[k]] = x[iout[k]] + rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
+            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
+            z[iout[k]] = z[iout[k]] + rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
         end
-        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - x[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
         open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io #o que essa linha faz exatamente?
             writedlm(io, FileMatrix)
@@ -681,216 +785,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
     end
 end
 
-function diferential(model, θ, data, dim)
-
-    cl2(x) = model(x, t)
-
-    grad_model!(h, x, t_) = begin
-
-        global t = t_
-
-        return ForwardDiff.gradient(h, x)
-    end
-    (m, n) = size(data)
-    J = zeros(m, Int(dim))
-
-    for i = 1:m
-        J[i, :] = grad_model!(cl2, θ, data[i, :])
-    end
-    return J
-end
-
-
-function func(x, model, data)
-    (m, n) = size(data)
-    F = zeros(m)
-    for i = 1:m
-        F[i] = model(x, data[i, :])
-    end
-    return F
-end
-
-#Para rodar Levenberg insira o modelo, o chute inicial, os dados disponíveis do modelo e a dimensão do modelo ---- > a função func devolve o vetor do modelo aplicado nos pontos data e a função diferential gera a matriz jacobiana do modelo
-
-function Levenberg(model, x, data, dim, ε=10e-4, λ_min=0.7)
-    k = 0
-    F = func(x, model, data)
-    J = diferential(model, x, data, dim)
-    (m, n) = size(J)
-    xn = zeros(length(x))
-    Id = Matrix{Float64}(I, n, n)
-    λ = 1.0#norm((J') * F, 2) / (norm(F, 2)^2)
-    k1 = 2.5
-    k2 = 3.5
-    while norm((J') * F) > ε && k < 50
-        d = (J' * J + λ * Id) \ ((-J') * F)
-        xn = x + d
-        if 0.5 * norm(func(xn, model, data), 2)^2 < 0.5 * norm(func(x, model, data), 2)^2
-            x = xn
-            if λ < λ_min
-                λ = λ_min
-            else
-                λ = λ / k1
-            end
-            F = func(x, model, data)
-            J = diferential(model, x, data, dim)
-        else
-            λ = λ * k2
-        end
-        k = k + 1
-    end
-    #x = x/norm(x[1:3])
-    return x, k
-end
-
-#Para rodar LMPers insira chute inicial, modelo, os pontos do problema, a dimensão, uma função de ordenação --- o arquivo de funções nos scripts possui uma função que chama sort_funcion_res, ela funciona para qualquer modelo e por ultimo a quantidade de outliers --- o chute inicial deve ser uma tupla, ou seja, algo do tipo ([1.0, 1.0, 1.0, 1.0],0) -- > o 0 é para realizar a contagem de ordenações
-function LMPers(xk, model, data, dim, ord, nout, ε=1.0e-4)
-    ordres = ord(xk[1], model, data, nout)
-    antres = 0.0
-    k = 1
-    kk = 0
-    while abs(ordres[2] - antres) > ε
-        antres = ordres[2]
-        xk = Levenberg(model, xk[1], ordres[1], dim)
-        kk = kk + xk[2]
-        ordres = ord(xk[1], model, data, nout)
-        k = k + 1
-    end
-    #x = xk[1]
-    #x[1:3] = x[1:3]/norm(x[1:3])
-    return xk[1], kk, k, ordres[1], ordres[2]
-end
-
-
-
-function LMLOVO(xk, model, data, dim, Ord, nout, ε=1.0e-4, MAXIT=50)
-    newdata = Ord(xk, model, data, nout)
-    R = func(xk, model, data)
-    J = diferential(model, xk, data, dim)
-    (m, n) = size(J)
-    Id = Matrix{Float64}(I, n, n)
-    k = 0
-    λ_up = 2.0
-    λ_down = 2.0
-    λ = 1.0
-    μ = 0.7
-    dk = 0.0
-    while norm(J' * R, 2) >= ε && k < MAXIT
-        dk = (J' * J + λ * Id) \ ((-J') * R)
-        md = 0.5 * (norm((R + J * dk), 2))^2 + λ * norm(dk, 2)^2
-        Rd = func(xk + dk, model, newdata[1])
-        ρk = (0.5 * norm(R, 2)^2 - 0.5 * norm(Rd, 2)^2) / (0.5 * norm(R, 2)^2 - md)
-        if ρk < μ
-            λ = λ * λ_up
-        else
-            λ = λ / λ_down
-            xk = xk + dk
-            newdata = Ord(xk, model, data, nout)
-            R = func(xk, model, newdata[1])
-            J = diferential(model, xk, newdata[1], dim)
-            k = k + 1
-        end
-    end
-    xk = xk / norm(xk[1:3])
-    return xk, k, newdata[2]
-end
-
-
-
-function CGAHypercircle(data; ε=1.0e-4)
-    (N, n) = size(data)
-    p = (1.0 / N)
-    H1 = zeros(3, 3)
-    H2 = zeros(3, 3)
-    H3 = 0.0
-    H4 = zeros(3, 3)
-    H5 = zeros(3)'
-    H6 = 0.0
-    H7 = zeros(3)'
-    Id = [1 0 0; 0 1 0; 0 0 1]
-    SI = zeros(3, 3)
-    P = zeros(10, 10)
-    Nf = convert(AbstractFloat, N)
-
-    for i = 1:N
-        H1 = H1 + [0.0 -data[i, 3] data[i, 2]; data[i, 3] 0.0 -data[i, 1]; -data[i, 2] data[i, 1] 0.0]
-        H2 = H2 + ([0.0 -data[i, 3] data[i, 2]; data[i, 3] 0.0 -data[i, 1]; -data[i, 2] data[i, 1] 0.0])^2
-        H3 = H3 + norm(data[i, :])^2
-        H4 = H4 + (norm(data[i, :])^2) * [0.0 -data[i, 3] data[i, 2]; data[i, 3] 0.0 -data[i, 1]; -data[i, 2] data[i, 1] 0.0]
-        H5 = H5 + (norm(data[i, :])^2) * (data[i, :])'
-        H6 = H6 + norm(data[i, :])^4
-        H7 = H7 + data[i, :]'
-        SI = SI + [1 0 0; 0 1 0; 0 0 1]
-    end
-    P[1:3, 1:3] = -H2
-    P[4:6, 1:3] = -H1
-    P[7:9, 1:3] = (1 / 2) * H4 #antes era só h1
-    P[1:3, 4:6] = -(1 / 2) * H4
-    P[4:6, 4:6] = H2 + (1 / 2) * H3 * Id
-    P[7:9, 4:6] = (1 / 4) * H6 * Id
-    P[10, 4:6] = (1 / 2) * H5
-    P[1:3, 7:9] = H1
-    P[4:6, 7:9] = SI
-    P[7:9, 7:9] = H2 + (1 / 2) * H3 * Id
-    P[10, 7:9] = H7
-    P[4:6, 10] = -H7'
-    P[7:9, 10] = -(1 / 2) * H5'
-    P[10, 10] = -H3
-    P = p .* (P)
-    #display(P)
-    F = eigen(P)
-    indmin = 1
-    valmin = F.values[1]
-    for i = 2:10
-        if abs(valmin) > abs(F.values[i])
-            if F.values[i] > -ε
-                indmin = i
-                valmin = F.values[i]
-            end
-        end
-    end
-    if valmin < -ε
-        error("P does not have postive eigen value!")
-    end
-    A = F.vectors[:, indmin]
-    n1 = -A[4:6]
-    d1, d2, d3 = n1[1], n1[2], n1[3]
-    C = [d1 d2 d3; 0 d3 -d2; -d3 0 d1; d2 -d1 0]
-    α = norm(A[4:6])
-    center = [A[10]; A[1:3]]' / -C'    #talvez tenha que alterar muito
-    n1 = n1 / α
-    radius = (center * center' - 2 * n1' * A[7:9] / α - 2 * (n1' * center')^2)
-
-    display(radius)
-
-    #α = norm(n1)
-    #daqui pra baixo ta diferente
-    #H = A/α
-    #n = -H[4:6]
-    #B0, B1, B2, B3 = -H[10], H[1], H[2], H[3]
-    #c = [B0 -B3 B2; B3 B0 -B1; -B2 B1 B0]*n
-    #vinf = H[7:9]
-    #r = sqrt(norm(c)^2 -2*(n1'*vinf)/α - 2*((B0)^2))
-
-
-    #n = n1/α
-    #B0, B1, B2, B3 = -A[10], A[1], A[2], A[3]
-    #c = [B0 -B3 B2; B3 B0 -B1; -B2 B1 B0] * (n1/α^2)
-    #vinf = A[7:9]
-    #r = sqrt(norm(c)^2 -2*(n1'*vinf/α^2) - 2*((B0)^2)/α^2)
-
-    # push!(center,√(norm(center,2)^2 -2.0*xnorm[end]))
-    #return push!(n1, center, sqrt(radius))
-    u = [n1[1], n1[2], n1[3], center[1], center[2], center[3], sqrt(radius)]
-    return u
-end
 
 function sort_funcion_res(x, model, data, nout)
     P = data
     (n, m) = size(data)
     v = zeros(n)
     for i = 1:n
-        v[i] = (model(x, data[i, :]))^2
+        v[i] = (model(data[i, 1], x) - data[i, end])^2
     end
     indtrust = [1:n;]
     for i = 1:n-nout+1
@@ -909,21 +810,6 @@ function sort_funcion_res(x, model, data, nout)
     return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
 end
 
-
-
-function LOVOCGAHypercircle(data, nout, θ, ε=1.0e-6)
-    ordres = sort_circle_res(data, θ, nout)
-    k = 1
-    antres = 0.0
-    while abs(ordres[2] - antres) > ε
-        antres = ordres[2]
-        θ = CGAHypercircle(ordres[1])
-        ordres = sort_circle_res(data, θ, nout)
-        k = k + 1
-    end
-    display(k)
-    return θ
-end
 
 
 
@@ -1013,7 +899,7 @@ function show(io::IO, fout::FitOutputType)
     print(io, "  ↳ Number of function calls (.feval) = $(fout.feval) \n")
 end
 
-
+#comentando 
 
 end # module
 

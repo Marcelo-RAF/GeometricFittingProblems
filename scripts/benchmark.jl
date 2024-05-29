@@ -1,12 +1,11 @@
 using BenchmarkTools, CSV, DataFrames
 
 
-probt = load_problem("cubic_0.1_4.1_-1.1_15.csv")
 
 function testes() #esse arquivo está na pasta resultsLM\Cubic\semruido
   prob = load_problem("cubic_0.1_4.1_-1.1_15.csv")
   teste(prob)
-  k = LMPers(([1.0, 1.0, 1.0, 1.0], 0), prob.model, prob.data, prob.dim, sort_funcion_res, prob.nout)
+  k = LMPers(([1.0, 1.0, 1.0, 1.0], 0), prob.model, prob.data, prob.dim, prob.nout)
   return k
 end
 
