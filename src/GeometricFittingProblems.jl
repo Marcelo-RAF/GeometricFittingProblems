@@ -98,6 +98,7 @@ function AGCGA(data, object::String, ε=1.0e-5) #algoritmo dorst esferas
     p = (1.0 / N)
     P = p .* (DDt)
     F = eigen(P)
+    return F
     indmin = 1
     valmin = F.values[1]
     for i = 2:n
@@ -114,10 +115,10 @@ function AGCGA(data, object::String, ε=1.0e-5) #algoritmo dorst esferas
     #xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
     #center = xnorm[1:end-2]
     #hhh = push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
-    if object == "sphere" || "plane"
+    if object == "sphere" || object == "plane"
         return F.vectors[:, indmin]
     end
-    if object == "line" || "circle"
+    if object == "line" || object == "circle"
         return F.vectors[:, indmin], F.vectors[:, indmin+1]
     end #hhh push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end]))
 end
@@ -173,7 +174,7 @@ function AACGA(data, object::String, ε=1.0e-5)
     if valmin < -ε
         error("P does not have postive eigen value!")
     end
-    if object == "sphere" || "plane"
+    if object == "sphere" || object == "plane"
         return F.vectors[:, indmin]
     end
     if object == "line" || "circle"
@@ -205,46 +206,49 @@ function ICGA(data, object::String)
     v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
     D = [data'; -ones(1, N); v']
     Dd = simetrica(D)
-    if nullspace(Dd) == zeros(n + 2, 0)
-        if object == "sphere"
-            Dd[end, :] .= 0.0
-            np = nullspace(Dd)
-            #p = np / np[end]
-            #centernp = np[1:end-2]
-            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-            return np
-        end
-        if object == "plane"
-            B = Dd[1:end-2, 1:end-2]
-            u = Dd[1:end-2, end-1]
-            a = Dd[end-1, end-1]
-            H = B - (u * u') / a
-            F = eigen(H)
-            vn = F.vectors[:, 1]
-            d = -(u' * vn) / a
-            π = [vn; d]
-            return π
-        end
-        if object == "circle"
-            B = Dd[1:end-2, 1:end-2]
-            u = Dd[1:end-2, end-1]
-            a = Dd[end-1, end-1]
-            H = B - (u * u') / a
-            F = eigen(H)
-            vn = F.vectors[:, 1]
-            d = -(u' * vn) / a
-            π = [vn; d]
-            Px = copy(Dd)
-            Px[end, :] .= 0.0
-            np = nullspace(Px)
-            #np = np / np[end]
-            #centernp = np[1:end-2]
-            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-            return π, np
-        end
-    else
-        return nullspace(Dd)
+    #if nullspace(Dd) == zeros(n + 2, 0)
+    if object == "sphere"
+        Dd[end, :] .= 0.0
+        np = nullspace(Dd)
+        #p = np / np[end]
+        #centernp = np[1:end-2]
+        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+        return np
     end
+    if object == "plane"
+        B = Dd[1:end-2, 1:end-2]
+        u = Dd[1:end-2, end-1]
+        a = Dd[end-1, end-1]
+        H = B - (u * u') / a
+        F = eigen(H)
+        vn = F.vectors[:, 1]
+        vn2 = F.vectors[:, 2]
+        d = -(u' * vn) / a
+        d2 = -(u' * vn2) / a
+        π = [vn; d]
+        pi2 = [vn2; d2]
+        return π, pi2
+    end
+    if object == "circle"
+        B = Dd[1:end-2, 1:end-2]
+        u = Dd[1:end-2, end-1]
+        a = Dd[end-1, end-1]
+        H = B - (u * u') / a
+        F = eigen(H)
+        vn = F.vectors[:, 1]
+        d = -(u' * vn) / a
+        π = [vn; d]
+        Px = copy(Dd)
+        Px[end, :] .= 0.0
+        np = nullspace(Px)
+        #np = np / np[end]
+        #centernp = np[1:end-2]
+        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+        return π, np
+    end
+    #else
+    #   return nullspace(Dd)
+    #end
 end
 
 function conformalsort(P, x, nout)
@@ -258,7 +262,7 @@ function conformalsort(P, x, nout)
         for j = 1:n
             h[i] = h[i] + D[i, j] * x[j]
         end
-        h[i] = (h[i] - x[end] - x[end-1] * v[i])^2
+        h[i] = (h[i] - x[end-1] - x[end] * v[i])^2
     end
     indtrust = [1:m;]
     for i = 1:m-nout+1
@@ -298,16 +302,21 @@ function LOVOCGA(data, nout, θ, name, ε=1.0e-5)
     ordres = conformalsort(data, θ, nout)
     k = 1
     antres = 0.0
-    while abs(ordres[2] - antres) > ε && k < 40
+    while abs(ordres[2] - antres) > ε && k < 100
         antres = ordres[2]
         if name == "AACGA"
-            θ = AACGA(ordres[1])
+            θ = AACGA(ordres[1], "sphere")
         end
         if name == "AGCGA"
             θ = AGCGA(ordres[1])
             #display(θ)
         end
+        if name == "ICGA"
+            θ = ICGA(ordres[1], "sphere")
+            #display(θ)
+        end
         ordres = conformalsort(data, θ, nout)
+        #display(ordres[1])
         k = k + 1
     end
     return θ, k, ordres[1], ordres[2]
@@ -528,9 +537,10 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         x = zeros(npts)
         y = zeros(npts)
         sgn = sign(randn())
+        ruid = randn(1, npts)
         for i = 1:npts
             x[i] = t[i]
-            y[i] = p[1] * x[i] + p[2] #+ (1.0 + 2 * rand()) * 7.0 * sgn
+            y[i] = p[1] * x[i] + p[2] #+ ruid[1,i] #+ (1.0 + 2 * rand()) * 7.0 * sgn
         end
         k = 1
         iout = []
@@ -542,7 +552,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             end
         end
         for k = 1:nout
-            y[iout[k]] = p[1] * x[iout[k]] + p[2] + randn() * 50 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
+            y[iout[k]] = p[1] * x[iout[k]] + p[2] + rand() * 50 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
         FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*x + t[2]"; "dim :" 2; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: line model"]
@@ -561,12 +571,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
+        ruid = randn(3, npts)
         for i = 1:npts
             for j = 1:npts
                 λ = rand(pp)
-                x[i] = p0[1] + λ * u[1]
-                y[i] = p0[2] + λ * u[2]
-                z[i] = p0[3] + λ * u[3]
+                x[i] = p0[1] + λ * u[1] + ruid[1, i]
+                y[i] = p0[2] + λ * u[2] + ruid[2, i]
+                z[i] = p0[3] + λ * u[3] + ruid[3, i]
             end
         end
         nout = Int(params[8])
@@ -585,7 +596,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> p0 + λ*u"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" "description :" [[p0, p0]]]
+        #FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :"[push!(u)]; "description :" [[p0]]]
+
+        FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 3; "cluster :" "false"; "noise :" "true"; "solution :" [push!(u, r)]; "description :" [[p0]]]
 
         open("line3d_$(u[1])_$(u[2])_$(u[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -689,9 +702,9 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         G = randn(3, npts)
         for i = 1:npts
-            x[i] = w[1, i] #+ G[1, i]
-            y[i] = w[2, i] #+ G[2, i]
-            z[i] = w[3, i] #+ G[3, i]
+            x[i] = w[1, i] + G[1, i]
+            y[i] = w[2, i] + G[2, i]
+            z[i] = w[3, i] + G[3, i]
         end
         FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> ( (x[1] - t[4])*t[1] +(x[2]-t[5])*t[2] +(x[3]-t[6])*t[3])^2 + ((x[1]-t[4])^2 + (x[2]-t[5])^2 + (x[3]-t[6])^2 - t[7]^2)^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vnc, r)]; "description :" [[u, v]]]
 
@@ -786,29 +799,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
 end
 
 
-function sort_funcion_res(x, model, data, nout)
-    P = data
-    (n, m) = size(data)
-    v = zeros(n)
-    for i = 1:n
-        v[i] = (model(data[i, 1], x) - data[i, end])^2
-    end
-    indtrust = [1:n;]
-    for i = 1:n-nout+1
-        for j = i+1:n
-            if v[i] > v[j]
-                aux = v[j]
-                v[j] = v[i]
-                v[i] = aux
-                aux2 = indtrust[j]
-                indtrust[j] = indtrust[i]
-                indtrust[i] = aux2
-            end
-        end
-    end
-    #    println(indtrust[n-nout+1:n])
-    return P[indtrust[1:n-nout], :], sum(v[1:n-nout])
-end
+
 
 
 
