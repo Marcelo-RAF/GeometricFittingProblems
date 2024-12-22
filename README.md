@@ -9,5 +9,7 @@ This project aims to present algorithms in Geometric Algebra (GA) implemented in
 This project was developed by:
 
 Marcelo Renan Augusto Ferreira;
+
 Emerson Vitor Castelani;
+
 Wesley Vagner Inês Shirabayashi.
