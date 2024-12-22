@@ -207,47 +207,64 @@ function ICGA(data, object::String)
     D = [data'; -ones(1, N); v']
     Dd = simetrica(D)
     #if nullspace(Dd) == zeros(n + 2, 0)
-    if object == "sphere"
-        Dd[end, :] .= 0.0
-        np = nullspace(Dd)
-        #p = np / np[end]
-        #centernp = np[1:end-2]
-        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-        return np
-    end
-    if object == "plane"
-        B = Dd[1:end-2, 1:end-2]
-        u = Dd[1:end-2, end-1]
-        a = Dd[end-1, end-1]
-        H = B - (u * u') / a
-        F = eigen(H)
-        vn = F.vectors[:, 1]
-        vn2 = F.vectors[:, 2]
-        d = -(u' * vn) / a
-        d2 = -(u' * vn2) / a
-        π = [vn; d]
-        pi2 = [vn2; d2]
-        return π, pi2
-    end
-    if object == "circle"
-        B = Dd[1:end-2, 1:end-2]
-        u = Dd[1:end-2, end-1]
-        a = Dd[end-1, end-1]
-        H = B - (u * u') / a
-        F = eigen(H)
-        vn = F.vectors[:, 1]
-        d = -(u' * vn) / a
-        π = [vn; d]
-        Px = copy(Dd)
-        Px[end, :] .= 0.0
-        np = nullspace(Px)
-        #np = np / np[end]
-        #centernp = np[1:end-2]
-        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-        return π, np
-    end
+        if object == "sphere"
+            Dd[end, :] .= 0.0
+            np = nullspace(Dd)
+            return np
+            #p = np / np[end]
+            #centernp = np[1:end-2]
+            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+            return np
+        end
+        if object == "plane"
+            B = Dd[1:end-2, 1:end-2]
+            u = Dd[1:end-2, end-1]
+            w = Dd[1:end-2, end]
+            a = Dd[end-1, end-1]
+            a2 = Dd[end-1,end]
+            H = B - (u * u') / a
+            F = eigen(H)
+            vn = F.vectors[:, 1]
+            d = -(u' * vn) / a
+            π = [vn; d]
+            #coef = (-w'*vn)/a2
+            
+            return π#, coef
+        end
+        if object == "reta"
+            B = Dd[1:end-2, 1:end-2]
+            u = Dd[1:end-2, end-1]
+            a = Dd[end-1, end-1]
+            a2 = Dd[end-1,end]
+            H = B - (u * u') / a
+            F = eigen(H)
+            vn = F.vectors[:, 1]
+            vn2 = F.vectors[:, 2]
+            d = -(u' * vn) / a
+            d2 = -(u' * vn2) / a
+            π = [vn; d]
+            pi2 = [vn2; d2]
+            return π, pi2
+        end
+        if object == "circle"
+            B = Dd[1:end-2, 1:end-2]
+            u = Dd[1:end-2, end-1]
+            a = Dd[end-1, end-1]
+            H = B - (u * u') / a
+            F = eigen(H)
+            vn = F.vectors[:, 1]
+            d = -(u' * vn) / a
+            π = [vn; d]
+            Px = copy(Dd)
+            Px[end, :] .= 0.0
+            np = nullspace(Px)
+            #np = np / np[end]
+            #centernp = np[1:end-2]
+            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+            return π, np
+        end
     #else
-    #   return nullspace(Dd)
+     #   return nullspace(Dd)
     #end
 end
 
@@ -322,6 +339,12 @@ function LOVOCGA(data, nout, θ, name, ε=1.0e-5)
     return θ, k, ordres[1], ordres[2]
 end
 
+function transphere(np)
+    npnorm = np / np[end]
+    centernp = npnorm[1:end-2]
+    hj = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end-1]))
+    return hj
+  end
 
 
 function solve(prob::FitProbType, method::String)
