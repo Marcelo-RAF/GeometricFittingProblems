@@ -1,2 +1,4 @@
-# How to use
-
+---
+layout: default
+title: How to use
+---
