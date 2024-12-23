@@ -98,7 +98,6 @@ function AGCGA(data, object::String, ε=1.0e-5) #algoritmo dorst esferas
     p = (1.0 / N)
     P = p .* (DDt)
     F = eigen(P)
-    return F
     indmin = 1
     valmin = F.values[1]
     for i = 2:n
@@ -824,7 +823,76 @@ end
 
 
 
-
+function fittingclass(data, ε1, ε2)
+    (N, n) = size(data)
+    v = [0.5 * norm(data[i, :], 2)^2 for i = 1:N]
+    D = [data'; v'; ones(1, N)]
+    J = copy(D')
+    H = -copy(J[:, n+1])
+    J[:, n+1] = -J[:, n+2]
+    J[:, n+2] = H
+    DDt = D * D'
+    p = (1.0 / N)
+    IM = p*copy(DDt)
+    aux = -copy(DDt[:, n+1])
+    DDt[:, n+1] = -DDt[:, n+2]
+    DDt[:, n+2] = aux
+    P = p .* (DDt)
+    F = eigen(P)
+    λ1 = F.values[2]
+    λ2 = F.values[3]
+    v1 = F.vectors[:,2]
+    v2 = F.vectors[:,3]
+    if λ2 - λ1 > ε1
+        s1 = transphere(v1)
+        if 1/s1[end] > ε2
+            println("uma esfera")
+            return s1
+        else
+            B = IM[1:end-2, 1:end-2]
+            u = IM[1:end-2, end-1]
+            a = IM[end-1, end-1]
+            H = B - (u * u') / a
+            F = eigen(H)
+            vn = F.vectors[:, 1]
+            d = -(u' * vn) / a
+            π = [vn; d]
+            println("um plano")
+            return π
+        end
+    else
+        s1 = transphere(v1)
+        s2 = transphere(v2)
+        if 1/s1[end] > ε2 || 1/s2[end] > ε2
+            if 1/s1[end] < ε2
+                B = IM[1:end-2, 1:end-2]
+                u = IM[1:end-2, end-1]
+                a = IM[end-1, end-1]
+                H = B - (u * u') / a
+                F = eigen(H)
+                vn = F.vectors[:, 1]
+                d = -(u' * vn) / a
+                π = [vn; d]
+                println("círculo como intersecção da esfera e plano")
+                return s1, π
+            end
+        else
+            B = IM[1:end-2, 1:end-2]
+            u = IM[1:end-2, end-1]
+            a = IM[end-1, end-1]
+            H = B - (u * u') / a
+            F = eigen(H)
+            vn = F.vectors[:, 1]
+            vn2 = F.vectors[:, 2]
+            d = -(u' * vn) / a
+            d2 = -(u' * vn2) / a
+            π = [vn; d]
+            π2 = [vn2; d2]
+            println("reta como intersecção dos planos")
+            return π, π2
+        end
+    end
+end
 
 
 function visualize(prob, a)
