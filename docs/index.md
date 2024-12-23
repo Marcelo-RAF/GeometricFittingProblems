@@ -1,3 +1,4 @@
+---
 layout: default
 title: Geometric Fitting Problems Documentation
 ---
