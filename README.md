@@ -3,20 +3,9 @@ This project is focused in Geometric Fitting considering the following direction
 
 This project aims to present algorithms in Geometric Algebra (GA) implemented in the Julia programming language. It includes an algorithm for fitting spheres using tangential distance, planes using orthogonal distance, and an algorithm capable of fitting and classifying objects. Additionally, we introduce a LOVO-CGA algorithm for solving detection problems.
 
-[![Installation](https://img.shields.io/badge/Installation-blue?style=for-the-badge)](Installation.md)
+To learn how to install and use the package, visit the documentation: 
 
-
-<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
-
-<a href="installation.md" target="_blank" style="text-decoration: none;">
-  <img src="https://img.shields.io/badge/Installation-blue?style=for-the-badge" alt="Installation">
-</a>
-
-<a href="how_to_use.md" target="_blank" style="text-decoration: none;">
-  <img src="https://img.shields.io/badge/How%20to%20Use-green?style=for-the-badge" alt="How to Use">
-</a>
-
-</div>
+[![Documentation](https://img.shields.io/badge/Documentation-Visit-blue)](https://marcelo-raf.github.io/GeometricFittingProblems/)
 
 This project was developed by:
 
