@@ -1,4 +1,9 @@
-# Installation Instruction
+---
+layout: default
+title: Installation Instructions
+---
+
+# Installation Instructions
 
 This package is not yet in `Metadata.jl`, so it can't be installed with the Julia package manager.  
 To install it, from the Julia REPL:
