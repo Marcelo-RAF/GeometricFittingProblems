@@ -11,8 +11,9 @@ To install it, from the Julia REPL:
 1. Press `]` to enter the Pkg REPL mode.
 2. Run the following command:
 
-   ```julia
+   ```
    add https://github.com/Marcelo-RAF/GeometricFittingProblems.jl
+   ```
 
 3. After the installation, press Backspace to return to the Julia REPL.
 
