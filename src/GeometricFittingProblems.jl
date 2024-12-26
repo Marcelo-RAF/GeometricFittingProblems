@@ -377,7 +377,7 @@ returns a vector
 """
 
 function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
-    if probtype == "line2d"
+    if probtype == "line2D"
         println("params need to be setup as [vector, npts, nout]")
         p = [params[1], params[2]]
         npts = Int(params[3])
@@ -418,7 +418,7 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
         end
 
     end
-    if probtype == "line3d"
+    if probtype == "line3D"
         println("params need to be setup as [point,direction,npts,nout]")
         p0 = [params[1], params[2], params[3]]
         u = [params[4], params[5], params[6]]
@@ -525,7 +525,7 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
             writedlm(io, FileMatrix)
         end
     end
-    if probtype == "circle3d"
+    if probtype == "circle"
         println("params need to be setup as [center,radious,npts,nout]")
         c = [params[1], params[2], params[3]]
         r = params[4]
