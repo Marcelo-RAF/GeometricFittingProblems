@@ -1,0 +1,21 @@
+body {
+  background-color: #000; /* Fundo preto */
+  color: #fff;           /* Texto branco */
+}
+
+a {
+  color: #1e90ff; /* Links em azul claro */
+}
+
+a:hover {
+  color: #87ceeb; /* Links ao passar o mouse */
+}
+
+nav.menu {
+  background-color: #333; /* Fundo da barra lateral */
+  color: #fff;
+}
+
+nav.menu a {
+  color: #fff; /* Links na barra lateral */
+}

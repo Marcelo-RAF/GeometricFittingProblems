@@ -3,6 +3,10 @@ title: Geometric Fitting Problems
 description: Documentation for the Geometric Fitting Problems package.
 markdown: kramdown
 
+minima:
+  custom_css:
+    - assets/css/custom.css
+
 nav:
   - title: Home
     url: /

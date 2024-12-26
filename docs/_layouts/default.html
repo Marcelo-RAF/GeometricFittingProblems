@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }}</title>
+    <!-- Incluindo o CSS personalizado -->
+    <link rel="stylesheet" href="{{ '/docs/assets/css/custom.css' | relative_url }}">
+</head>
+<body>
+    <div class="columns" style="display: flex; height: 100vh;">
+        <!-- Barra lateral -->
+        <aside style="width: 20%; background-color: #333; color: #fff; padding: 15px;">
+            <nav class="menu">
+                <ul style="list-style: none; padding: 0;">
+                    <li><a href="/docs/" style="color: #fff; text-decoration: none;">Home</a></li>
+                    <li><a href="/docs/installation/" style="color: #fff; text-decoration: none;">Installation</a></li>
+                    <li><a href="/docs/examples/" style="color: #fff; text-decoration: none;">Examples</a></li>
+                    <li><a href="/docs/how_to_use/" style="color: #fff; text-decoration: none;">How to Use</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <main style="flex-grow: 1; padding: 20px;">
+            {{ content }}
+        </main>
+    </div>
+</body>
+</html>
