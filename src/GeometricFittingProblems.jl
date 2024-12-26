@@ -176,7 +176,7 @@ function AACGA(data, object::String, ε=1.0e-5)
     if object == "sphere" || object == "plane"
         return F.vectors[:, indmin]
     end
-    if object == "line" || "circle"
+    if object == "line" || object == "circle"
         return F.vectors[:, indmin], F.vectors[:, indmin+1]
     end
     #xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
@@ -206,64 +206,64 @@ function ICGA(data, object::String)
     D = [data'; -ones(1, N); v']
     Dd = simetrica(D)
     #if nullspace(Dd) == zeros(n + 2, 0)
-        if object == "sphere"
-            Dd[end, :] .= 0.0
-            np = nullspace(Dd)
-            return np
-            #p = np / np[end]
-            #centernp = np[1:end-2]
-            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-            return np
-        end
-        if object == "plane"
-            B = Dd[1:end-2, 1:end-2]
-            u = Dd[1:end-2, end-1]
-            w = Dd[1:end-2, end]
-            a = Dd[end-1, end-1]
-            a2 = Dd[end-1,end]
-            H = B - (u * u') / a
-            F = eigen(H)
-            vn = F.vectors[:, 1]
-            d = -(u' * vn) / a
-            π = [vn; d]
-            #coef = (-w'*vn)/a2
-            
-            return π#, coef
-        end
-        if object == "reta"
-            B = Dd[1:end-2, 1:end-2]
-            u = Dd[1:end-2, end-1]
-            a = Dd[end-1, end-1]
-            a2 = Dd[end-1,end]
-            H = B - (u * u') / a
-            F = eigen(H)
-            vn = F.vectors[:, 1]
-            vn2 = F.vectors[:, 2]
-            d = -(u' * vn) / a
-            d2 = -(u' * vn2) / a
-            π = [vn; d]
-            pi2 = [vn2; d2]
-            return π, pi2
-        end
-        if object == "circle"
-            B = Dd[1:end-2, 1:end-2]
-            u = Dd[1:end-2, end-1]
-            a = Dd[end-1, end-1]
-            H = B - (u * u') / a
-            F = eigen(H)
-            vn = F.vectors[:, 1]
-            d = -(u' * vn) / a
-            π = [vn; d]
-            Px = copy(Dd)
-            Px[end, :] .= 0.0
-            np = nullspace(Px)
-            #np = np / np[end]
-            #centernp = np[1:end-2]
-            #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-            return π, np
-        end
+    if object == "sphere"
+        Dd[end, :] .= 0.0
+        np = nullspace(Dd)
+        return np
+        #p = np / np[end]
+        #centernp = np[1:end-2]
+        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+        return np
+    end
+    if object == "plane"
+        B = Dd[1:end-2, 1:end-2]
+        u = Dd[1:end-2, end-1]
+        w = Dd[1:end-2, end]
+        a = Dd[end-1, end-1]
+        a2 = Dd[end-1, end]
+        H = B - (u * u') / a
+        F = eigen(H)
+        vn = F.vectors[:, 1]
+        d = -(u' * vn) / a
+        π = [vn; d]
+        #coef = (-w'*vn)/a2
+
+        return π#, coef
+    end
+    if object == "reta"
+        B = Dd[1:end-2, 1:end-2]
+        u = Dd[1:end-2, end-1]
+        a = Dd[end-1, end-1]
+        a2 = Dd[end-1, end]
+        H = B - (u * u') / a
+        F = eigen(H)
+        vn = F.vectors[:, 1]
+        vn2 = F.vectors[:, 2]
+        d = -(u' * vn) / a
+        d2 = -(u' * vn2) / a
+        π = [vn; d]
+        pi2 = [vn2; d2]
+        return π, pi2
+    end
+    if object == "circle"
+        B = Dd[1:end-2, 1:end-2]
+        u = Dd[1:end-2, end-1]
+        a = Dd[end-1, end-1]
+        H = B - (u * u') / a
+        F = eigen(H)
+        vn = F.vectors[:, 1]
+        d = -(u' * vn) / a
+        π = [vn; d]
+        Px = copy(Dd)
+        Px[end, :] .= 0.0
+        np = nullspace(Px)
+        #np = np / np[end]
+        #centernp = np[1:end-2]
+        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
+        return π, np
+    end
     #else
-     #   return nullspace(Dd)
+    #   return nullspace(Dd)
     #end
 end
 
@@ -314,25 +314,25 @@ returns a vector
 """
 
 
-function LOVOCGA(data, nout, θ, name, ε=1.0e-5)
+function LOVOCGA(data, nout, θ, name, object, ε=1.0e-4)
     ordres = conformalsort(data, θ, nout)
     k = 1
     antres = 0.0
     while abs(ordres[2] - antres) > ε && k < 100
         antres = ordres[2]
         if name == "AACGA"
-            θ = AACGA(ordres[1], "sphere")
+            θ = AACGA(ordres[1], object)
         end
         if name == "AGCGA"
-            θ = AGCGA(ordres[1])
+            θ = AGCGA(ordres[1], object)
             #display(θ)
         end
         if name == "ICGA"
-            θ = ICGA(ordres[1], "sphere")
+            θ = ICGA(ordres[1], object)
             #display(θ)
         end
         ordres = conformalsort(data, θ, nout)
-        #display(ordres[1])
+        display(ordres[2])
         k = k + 1
     end
     return θ, k, ordres[1], ordres[2]
@@ -343,7 +343,7 @@ function transphere(np)
     centernp = npnorm[1:end-2]
     hj = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end-1]))
     return hj
-  end
+end
 
 
 function solve(prob::FitProbType, method::String)
@@ -376,180 +376,7 @@ returns a vector
 ```
 """
 
-function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
-    if probtype == "quadratic"
-        println("a limit vector is need to discretize the interval, for example, [-10.0,10.0]")
-        println("params need to be setup as [coefs of A, b and c,size_prob,npts,nout]")
-        nout = Int(params[end])
-        npts = Int(params[end-1])
-        size_prob = Int(params[end-2])
-        dim = length(params[1:end-3])
-        n = size_prob
-        mA = "["
-        sA = [" " for i = 1:n, j = 1:n]
-        A = zeros(n, n)
-        b = zeros(n)
-        c = 0.0
-        k = 1
-        for i = 1:n
-            for j = i:n
-                A[i, j] = params[k]
-                A[j, i] = A[i, j]
-                sA[i, j] = " t[$(k)] "
-                sA[j, i] = sA[i, j]
-                k += 1
-            end
-        end
-        for i = 1:n
-            for j = 1:n
-                mA = mA * sA[i, j]
-                if j == n
-                    if i == n
-                        mA = mA * "]"
-                    else
-                        mA = mA * ";"
-                    end
-                end
-            end
-        end
-        mb = "["
-        for i = 1:n-1
-            mb = mb * " t[$(k)],"
-            b[i] = params[k]
-            k += 1
-        end
-        mb = mb * "t[$(k)]]"
-        b[n] = params[k]
-        k += 1
-        mc = " t[$(k)]"
-        c = params[k]
-        m(x) = x' * A * x + b' * x + c
-        #display(A)
-        model = "(x,t) -> x'*$(mA)*x + $(mb)'*x + $(mc)"
-        r = (limit[2] - limit[1]) / (npts - 1)
-        x = rand(limit[1]:r:limit[2], npts)
-        for i = 1:n-1
-            x = [x rand(limit[1]:r:limit[2], npts)]
-        end
-        #display(x)
-        #global coefs = params[1:end-3]
-        y = zeros(npts)
-        #
-        for i = 1:npts
-            y[i] = m(x[i, :])
-        end
-
-        k = 1
-        iout = []
-        while k <= nout
-            i = rand([1:npts;])
-            if i ∉ iout
-                push!(iout, i)
-                k = k + 1
-            end
-        end
-        for k = 1:nout
-            x[iout[k], :] = x[iout[k], :] + randn(size_prob)
-            y[iout[k]] = y[iout[k]] + randn()
-        end
-
-        ## A(t) = begin
-        #         mA = zeros(size_prob,size_prob)
-        #         k = 1
-        #         for i=1:size_prob
-        #             for j=i:size_prob
-        #                 mA[i,j] = t[k]
-        #                 mA[j,i] = t[k]
-        #                 k += 1
-        #             end
-        #         end
-        #         return mA
-        #     end
-        # b(t) = begin
-        #     vb = zeros(size_prob)
-        #     k = Int(((size_prob^2+size_prob)/2)+1)
-        #         for i=1:size_prob
-        #             vb[i] = t[k]
-        #             k += 1
-        #         end
-        #         return vb
-        #     end
-        #     c(t) = t[Int(((size_prob^2+size_prob)/2)+size_prob+1)]
-        # 
-        # model = "(x,t) -> x'*A(t)*x + b(t)'*x + c(t)"
-
-
-        FileMatrix = ["name :" "Quadratic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" model; "dim :" dim; "cluster :" "false"; "noise :" "false"; "solution :" [params[1:end-3]]; "description :" "none"]
-
-        open("quadratic_$(params[1])_$(params[end-3])_$(size_prob)_$(dim)_$(npts)_$(nout).csv", "w") do io
-            writedlm(io, FileMatrix)
-        end
-    end
-    if probtype == "exponencial"
-        println("params need to be setup as [vector, npts, nout]")
-        p = [params[1], params[2]]
-        npts = Int(params[3])
-        nout = Int(params[4])
-        t = range(0.0, stop=15.0, length=npts)
-        x = zeros(npts)
-        y = zeros(npts)
-        ruid = randn(npts)
-        for i = 1:npts
-            x[i] = t[i]
-            y[i] = p[1] * exp(-p[2] * x[i]) + ruid[i]
-        end
-        k = 1
-        iout = []
-        while k <= nout
-            i = rand([1:npts;])
-            if i ∉ iout
-                push!(iout, i)
-                k = k + 1
-            end
-        end
-        r = 3
-        for k = 1:nout
-            y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])#rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
-        end
-
-        FileMatrix = ["name :" "exponencial"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*exp(-t[2]*x) "; "dim :" 2; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type: exponencial function"]
-
-        open("exponencial_$(p[1])_$(p[2])_$(nout).csv", "w") do io
-            writedlm(io, FileMatrix)
-        end
-    end
-    if probtype == "cubic"
-        println("params need to be setup as [vector, npts, nout]")
-        p = [params[1], params[2], params[3], params[4]]
-        npts = Int(params[5])
-        nout = Int(params[6])
-        t = range(-5.0, stop=5.0, length=npts)
-        x = zeros(npts)
-        y = zeros(npts)
-        sgn = sign(randn())
-        for i = 1:npts
-            x[i] = t[i]
-            y[i] = p[1] * x[i]^3 + p[2] * x[i]^2 + p[3] * x[i] + p[4] + (1.0 + 2 * rand()) * 7.0 * sgn
-        end
-        k = 1
-        iout = []
-        while k <= nout
-            i = rand([1:npts;])
-            if i ∉ iout
-                push!(iout, i)
-                k = k + 1
-            end
-        end
-        for k = 1:nout
-            y[iout[k]] = p[1] * x[iout[k]]^3 + p[2] * x[iout[k]]^2 + p[3] * x[iout[k]] + p[4] + randn() * 200 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
-        end
-
-        FileMatrix = ["name :" "cubic"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*x[1]^3 + t[2]*x[1]^2 + t[3]*x[1] + t[4] "; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(p)]; "description :" "type: cubic model with noise and outliers"]
-
-        open("cubic_$(p[1])_$(p[2])_$(p[3])_$(nout).csv", "w") do io
-            writedlm(io, FileMatrix)
-        end
-    end
+function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
     if probtype == "line2d"
         println("params need to be setup as [vector, npts, nout]")
         p = [params[1], params[2]]
@@ -560,9 +387,16 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         sgn = sign(randn())
         ruid = randn(1, npts)
-        for i = 1:npts
-            x[i] = t[i]
-            y[i] = p[1] * x[i] + p[2] #+ ruid[1,i] #+ (1.0 + 2 * rand()) * 7.0 * sgn
+        if noise == true
+            for i = 1:npts
+                x[i] = t[i]
+                y[i] = p[1] * x[i] + p[2] + ruid[1, i] #+ (1.0 + 2 * rand()) * 7.0 * sgn
+            end
+        else
+            for i = 1:npts
+                x[i] = t[i]
+                y[i] = p[1] * x[i] + p[2]
+            end
         end
         k = 1
         iout = []
@@ -577,7 +411,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = p[1] * x[iout[k]] + p[2] + rand() * 50 #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
 
-        FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*x + t[2]"; "dim :" 2; "cluster :" "false"; "noise :" "false"; "solution :" [push!(p)]; "description :" "type2: line model"]
+        FileMatrix = ["name :" "line2d"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> t[1]*x + t[2]"; "dim :" 2; "cluster :" "false"; "noise :" noise; "solution :" [push!(p)]; "description :" "type2: line model"]
 
         open("line2d_$(p[1])_$(p[2])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -594,12 +428,19 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         y = zeros(npts)
         z = zeros(npts)
         ruid = randn(3, npts)
-        for i = 1:npts
-            for j = 1:npts
+        if noise == true
+            for i = 1:npts
                 λ = rand(pp)
                 x[i] = p0[1] + λ * u[1] + ruid[1, i]
                 y[i] = p0[2] + λ * u[2] + ruid[2, i]
                 z[i] = p0[3] + λ * u[3] + ruid[3, i]
+            end
+        else
+            for i = 1:npts
+                λ = rand(pp)
+                x[i] = p0[1] + λ * u[1]
+                y[i] = p0[2] + λ * u[2]
+                z[i] = p0[3] + λ * u[3]
             end
         end
         nout = Int(params[8])
@@ -620,7 +461,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         end
         #FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :"[push!(u)]; "description :" [[p0]]]
 
-        FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 3; "cluster :" "false"; "noise :" "true"; "solution :" [push!(u, r)]; "description :" [[p0]]]
+        FileMatrix = ["name :" "line3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 3; "cluster :" "false"; "noise :" noise; "solution :" [push!(u, r)]; "description :" [[p0]]]
 
         open("line3d_$(u[1])_$(u[2])_$(u[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -645,13 +486,21 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         vn = push!(vn, d)
         ruid = randn(3, npts)
         sgn = sign(randn())
-        for i = 1:npts
-            for j = 1:npts
+        if noise == true
+            for i = 1:npts
                 λ = rand(pp)
                 μ = rand(pp)
-                x[i] = p0[1] + λ * u[1] + μ * v[1] + ruid[1, i] #(1.0+2*rand()) * 7.0*sgn#
+                x[i] = p0[1] + λ * u[1] + μ * v[1] + ruid[1, i]
                 y[i] = p0[2] + λ * u[2] + μ * v[2] + ruid[2, i]
                 z[i] = p0[3] + λ * u[3] + μ * v[3] + ruid[3, i]
+            end
+        else
+            for i = 1:npts
+                λ = rand(pp)
+                μ = rand(pp)
+                x[i] = p0[1] + λ * u[1] + μ * v[1]
+                y[i] = p0[2] + λ * u[2] + μ * v[2]
+                z[i] = p0[3] + λ * u[3] + μ * v[3]
             end
         end
         nout = Int(params[11])
@@ -670,7 +519,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.25)*r:0.1:(1+0.25)*r;])
         end
-        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1] + x[2]*t[2] + x[3]*t[3] + t[4]"; "dim :" 4; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
+        FileMatrix = ["name :" "plane"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> x[1]*t[1] + x[2]*t[2] + x[3]*t[3] + t[4]"; "dim :" 4; "cluster :" "false"; "noise :" noise; "solution :" [push!(vn)]; "description :" [[p0, p0]]]
 
         open("plane_$(vn[1])_$(vn[2])_$(vn[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -723,12 +572,20 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             w[:, iout[k]] = w[:, iout[k]] + [rand([-0.5*r:0.1:0.5*r;]), rand([-0.5*r:0.1:0.5*r;]), rand([-0.5*r:0.1:0.5*r;])]
         end
         G = randn(3, npts)
-        for i = 1:npts
-            x[i] = w[1, i] + G[1, i]
-            y[i] = w[2, i] + G[2, i]
-            z[i] = w[3, i] + G[3, i]
+        if noise == true
+            for i = 1:npts
+                x[i] = w[1, i] + G[1, i]
+                y[i] = w[2, i] + G[2, i]
+                z[i] = w[3, i] + G[3, i]
+            end
+        else
+            for i = 1:npts
+                x[i] = w[1, i]
+                y[i] = w[2, i]
+                z[i] = w[3, i]
+            end
         end
-        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> ( (x[1] - t[4])*t[1] +(x[2]-t[5])*t[2] +(x[3]-t[6])*t[3])^2 + ((x[1]-t[4])^2 + (x[2]-t[5])^2 + (x[3]-t[6])^2 - t[7]^2)^2"; "dim :" 7; "cluster :" "false"; "noise :" "false"; "solution :" [push!(vnc, r)]; "description :" [[u, v]]]
+        FileMatrix = ["name :" "circle3d"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> ( (x[1] - t[4])*t[1] +(x[2]-t[5])*t[2] +(x[3]-t[6])*t[3])^2 + ((x[1]-t[4])^2 + (x[2]-t[5])^2 + (x[3]-t[6])^2 - t[7]^2)^2"; "dim :" 7; "cluster :" "false"; "noise :" noise; "solution :" [push!(vnc, r)]; "description :" [[u, v]]]
 
         open("circle3D_$(c[1])_$(c[2])_$(c[3])_$(r)_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -745,9 +602,16 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         ruid = randn(2, npts)
         θ = range(0, stop=2π, length=npts) #Int(ceil(npts/2)))
         #θ2 = range(5*π/4, stop=7*π/4, length= 2*npts)#Int(ceil(npts/2)))
-        for k = 1:npts
-            x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]
-            y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k]
+        if noise == false
+            for k = 1:npts
+                x[k] = c[1] + r * cos(θ[k]) #+ ruid[1, k]
+                y[k] = c[2] + r * sin(θ[k]) #+ ruid[2, k]
+            end
+        else
+            for k = 1:npts
+                x[k] = c[1] + r * cos(θ[k]) + ruid[1, k]
+                y[k] = c[2] + r * sin(θ[k]) + ruid[2, k]
+            end
         end
         nout = Int(params[5])
         k = 1
@@ -765,7 +629,7 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             x[iout[k]] = x[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])
             y[iout[k]] = y[iout[k]] + rand([-(0.5)*r:0.1:(0.5)*r;])   #rand([0.25*r:0.1*(r); (1 + 0.25) * r])
         end
-        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" "false"; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
+        FileMatrix = ["name :" "sphere2D"; "data :" [[x y]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 - t[3]^2"; "dim :" 3; "cluster :" "false"; "noise :" noise; "solution :" [push!(c, r)]; "description :" "type3: test sphere2d with noise and outliers"]
 
         open("sphere2D_$(c[1])_$(c[2])_$(c[3])_$(nout).csv", "w") do io
             writedlm(io, FileMatrix)
@@ -783,19 +647,19 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
         w = zeros(npts)
         θ = range(0, stop=2π, length=npts)
         φ = range(0, stop=π, length=npts)
-        #φ2 = range(5π/6, stop=π, length=npts)
         rd = randn(3, npts)
-        #if iseven(npts)==false
-        #    l = Int(round(npts/2))
-        #   h = Int(ceil(npts/2))
-        #else
-        #   l = Int(npts/2)
-        #  h = Int(npts/2) + 1
-        # end
-        for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
-            x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
-            y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
-            z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
+        if noise == true
+            for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
+                x[k] = c[1] + r * cos(θ[k]) * sin(φ[k]) + rd[1, k]
+                y[k] = c[2] + r * sin(θ[k]) * sin(φ[k]) + rd[2, k]
+                z[k] = c[3] + r * cos(φ[k]) + rd[3, k]
+            end
+        else
+            for k = 1:npts #forma de espiral - ao criar outro forma, se obtem metade dos circulos máximos
+                x[k] = c[1] + r * cos(θ[k]) * sin(φ[k])
+                y[k] = c[2] + r * sin(θ[k]) * sin(φ[k])
+                z[k] = c[3] + r * cos(φ[k])
+            end
         end
         nout = Int(params[6])
         k = 1
@@ -812,16 +676,13 @@ function build_problem(probtype::String, limit::Vector{Float64}, params::Vector{
             y[iout[k]] = y[iout[k]] + rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
             z[iout[k]] = z[iout[k]] + rand([-(1 + 0.15)*r:0.1:(1+0.15)*r;])
         end
-        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" "true"; "solution :" [push!(c, r)]; "description :" [[c, c]]]
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" nout; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" noise; "solution :" [push!(c, r)]; "description :" [[c, c]]]
 
         open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_$(nout).csv", "w") do io #o que essa linha faz exatamente?
             writedlm(io, FileMatrix)
         end
     end
 end
-
-
-
 
 function fittingclass(data, ε1, ε2)
     (N, n) = size(data)
@@ -833,7 +694,7 @@ function fittingclass(data, ε1, ε2)
     J[:, n+2] = H
     DDt = D * D'
     p = (1.0 / N)
-    IM = p*copy(DDt)
+    IM = p * copy(DDt)
     aux = -copy(DDt[:, n+1])
     DDt[:, n+1] = -DDt[:, n+2]
     DDt[:, n+2] = aux
@@ -841,11 +702,11 @@ function fittingclass(data, ε1, ε2)
     F = eigen(P)
     λ1 = F.values[2]
     λ2 = F.values[3]
-    v1 = F.vectors[:,2]
-    v2 = F.vectors[:,3]
+    v1 = F.vectors[:, 2]
+    v2 = F.vectors[:, 3]
     if λ2 - λ1 > ε1
         s1 = transphere(v1)
-        if 1/s1[end] > ε2
+        if 1 / s1[end] > ε2
             println("uma esfera")
             return s1
         else
@@ -863,8 +724,8 @@ function fittingclass(data, ε1, ε2)
     else
         s1 = transphere(v1)
         s2 = transphere(v2)
-        if 1/s1[end] > ε2 || 1/s2[end] > ε2
-            if 1/s1[end] < ε2
+        if 1 / s1[end] > ε2 || 1 / s2[end] > ε2
+            if 1 / s1[end] < ε2
                 B = IM[1:end-2, 1:end-2]
                 u = IM[1:end-2, end-1]
                 a = IM[end-1, end-1]
