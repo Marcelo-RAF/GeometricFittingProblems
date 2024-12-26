@@ -1,3 +1,4 @@
 theme: jekyll-theme-cayman
 title: Geometric Fitting Problems
 description: Documentation for the Geometric Fitting Problems package.
+baseurl: "/docs"
