@@ -1,3 +1,13 @@
 theme: jekyll-theme-cayman
 title: Geometric Fitting Problems
 description: Documentation for the Geometric Fitting Problems package.
+
+nav:
+  - title: Home
+    url: /
+  - title: Installation
+    url: /installation/
+  - title: Examples
+    url: /examples/
+  - title: How to Use
+    url: /how_to_use/
