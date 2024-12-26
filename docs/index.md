@@ -12,7 +12,9 @@ In this documentation, you will find instructions on how to install the Geometri
 ## Summary
 
 [Installation Guide](Installation.md).
+
 [Generate Examples](examples.md).
+
 [How to use](how_to_use.md).
 
 
