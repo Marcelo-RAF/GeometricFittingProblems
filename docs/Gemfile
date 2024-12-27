@@ -1,8 +1,7 @@
 source 'https://rubygems.org'
 
-gem 'jekyll', '~> 4.3'
-gem 'just-the-docs', '~> 0.5.0'
-gem 'jekyll-sass-converter', '~> 3.0'
+gem 'jekyll' 
+gem 'just-the-docs'
 gem 'sass'
 gem 'wdm', '>= 0.1.0', platforms: [:mswin, :mingw]
 gem 'csv'

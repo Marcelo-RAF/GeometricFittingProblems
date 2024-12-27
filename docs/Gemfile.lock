@@ -83,9 +83,8 @@ PLATFORMS
 DEPENDENCIES
   base64
   csv
-  jekyll (~> 4.3)
-  jekyll-sass-converter (~> 3.0)
-  just-the-docs (~> 0.5.0)
+  jekyll
+  just-the-docs
   sass
   wdm (>= 0.1.0)
 
