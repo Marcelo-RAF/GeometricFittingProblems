@@ -1,24 +1,4 @@
-theme: minima
+theme: jekyll-theme-cayman
 title: Geometric Fitting Problems
 description: Documentation for the Geometric Fitting Problems package.
-markdown: kramdown
-
-minima:
-  custom_css:
-    - assets/css/custom.css
-
-kramdown:
-  input: GFM
-  syntax_highlighter: rouge
-  syntax_highlighter_opts:
-    css_class: "highlight"
-
-nav:
-  - title: Home
-    url: /docs/
-  - title: Installation
-    url: /docs/installation/
-  - title: Examples
-    url: /docs/examples/
-  - title: How to Use
-    url: /docs/how_to_use/
+baseurl: "/docs"
