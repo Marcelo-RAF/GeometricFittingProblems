@@ -79,8 +79,8 @@ PLATFORMS
 DEPENDENCIES
   base64
   csv
-  jekyll (~> 4.3)
-  just-the-docs (~> 0.5.4)
+  jekyll (~> 4.0)
+  just-the-docs
   wdm (>= 0.1.0)
   webrick (~> 1.7)
 
