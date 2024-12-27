@@ -16,18 +16,15 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.1" # Define a versão do Ruby como 3.1 ou superior
+          ruby-version: "3.1" # Defina a versão do Ruby
           bundler-cache: true
 
-      - name: Install Bundler
-        run: gem install bundler
-
       - name: Install dependencies
-        working-directory: ./docs
+        working-directory: ./docs # Trabalha na pasta `docs`
         run: bundle install
 
       - name: Build site
-        working-directory: ./docs
+        working-directory: ./docs # Trabalha na pasta `docs`
         run: bundle exec jekyll build --source . --destination ./_site
 
       - name: Deploy to GitHub Pages
