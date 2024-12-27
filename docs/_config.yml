@@ -2,7 +2,3 @@ theme: just-the-docs
 title: Geometric Fitting Problems
 description: Documentation for the Geometric Fitting Problems package.
 color_scheme: dark
-
-just_the_docs:
-  additional_css:
-    - /assets/css/custom.css
