@@ -24,7 +24,8 @@ jobs:
         run: bundle install
 
       - name: Build site
-        run: bundle exec jekyll build ./docs --destination ./_site # Ajusta os caminhos corretamente
+        run: bundle exec jekyll build --source $(pwd)/docs --destination $(pwd)/_site
+      # Ajusta os caminhos corretamente
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
