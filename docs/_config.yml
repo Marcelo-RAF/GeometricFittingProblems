@@ -15,10 +15,10 @@ kramdown:
 
 nav:
   - title: Home
-    url: /
+    url: /docs/
   - title: Installation
-    url: /installation/
+    url: /docs/installation/
   - title: Examples
-    url: /examples/
+    url: /docs/examples/
   - title: How to Use
-    url: /how_to_use/
+    url: /docs/how_to_use/
