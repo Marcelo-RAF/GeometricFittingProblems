@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'jekyll'
-gem 'jekyll-theme-chirpy'
+gem 'jekyll', '~> 4.3'
+gem 'jekyll-theme-chirpy', '~> 7.2'
 gem 'csv'
 gem 'base64'
