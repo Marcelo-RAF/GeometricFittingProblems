@@ -24,7 +24,7 @@ jobs:
         run: bundle install
 
       - name: Build site
-        run: bundle exec jekyll build --docs --destination ./_site
+        run: bundle exec jekyll build ./docs --destination ./_site
       # Ajusta os caminhos corretamente
 
       - name: Deploy to GitHub Pages
