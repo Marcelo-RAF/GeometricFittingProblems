@@ -1,21 +1,52 @@
+/* Aplicar fundo preto e texto branco ao corpo da página */
 body {
   background-color: #000; /* Fundo preto */
   color: #fff;           /* Texto branco */
 }
 
+/* Ajustar links */
 a {
   color: #1e90ff; /* Links em azul claro */
+  text-decoration: none;
 }
 
 a:hover {
   color: #87ceeb; /* Links ao passar o mouse */
 }
 
+/* Ajustar estilo da barra lateral */
 nav.menu {
-  background-color: #333; /* Fundo da barra lateral */
-  color: #fff;
+  background-color: #333; /* Fundo escuro */
+  color: #fff; /* Texto branco */
 }
 
 nav.menu a {
   color: #fff; /* Links na barra lateral */
+}
+
+nav.menu a:hover {
+  color: #87ceeb; /* Links ao passar o mouse */
+}
+
+/* Aplicar o estilo ao conteúdo principal */
+main {
+  background-color: #000; /* Fundo preto */
+  color: #fff; /* Texto branco */
+  padding: 20px;
+}
+
+/* Ajustar estilo para blocos de código */
+pre, code {
+  background-color: #111; /* Fundo mais escuro para blocos de código */
+  color: #1e90ff; /* Texto dos códigos */
+  border-radius: 5px;
+  padding: 10px;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Ajustar fonte dos blocos de código */
+code {
+  font-family: monospace;
+  font-size: 14px;
 }

@@ -7,6 +7,12 @@ minima:
   custom_css:
     - assets/css/custom.css
 
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: "highlight"
+
 nav:
   - title: Home
     url: /
