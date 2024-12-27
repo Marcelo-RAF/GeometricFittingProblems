@@ -1,20 +1,25 @@
-name: Build and Deploy Jekyll
-
+name: Build and Deploy Jekyll Site
 on:
   push:
     branches:
-      - main # Altere para a branch principal do seu repositório, se necessário
-
+      - main
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Build Jekyll site
-        uses: actions/jekyll-build-pages@v1
+      - uses: actions/checkout@v2
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
         with:
-          source: ./docs
-          destination: ./docs/_site
+          ruby-version: "2.7"
+      - name: Install Bundler
+        run: gem install bundler
+      - name: Install Dependencies
+        run: bundle install
+      - name: Build Site
+        run: bundle exec jekyll build --source ./docs --destination ./docs/_site
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_site
