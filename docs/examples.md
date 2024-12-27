@@ -1,6 +1,7 @@
 ---
-layout: sidebar
+layout: default
 title: Generate Examples
+nav_order: 4
 ---
 
 To generate examples, we will use the `build_problem` function, which can create artificial examples of 2D spheres, 3D spheres, 2D lines, 3D lines, planes, and circles. The input parameters for this function depend on the object to be fitted and can optionally include noise in the points. The function will generate a file with the `csv` extension, which will contain a matrix with the problem's points, the number of points, the number of outliers, and whether or not it includes noise.
@@ -105,4 +106,3 @@ build_problem("circle", [-5.0, -2.0, 15.0, 29.0, 2.0, 1.0, 3.0, -1.0, 2.0, 2.0, 
 # Learn More
 
 For more details on how to use the `build_problem` function and how to fit geometric objects using Geometric Algebra algorithms, visit the [How to Use](how_to_use.md) guide.
-

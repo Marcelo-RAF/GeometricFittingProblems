@@ -1,6 +1,7 @@
 ---
-layout: sidebar
+layout: default
 title: "Geometric Fitting Problems Documentation"
+nav_order: 1
 ---
 
 # Welcome to the Geometric Fitting Problems Documentation
@@ -13,7 +14,6 @@ This project aims to present algorithms in Geometric Algebra (GA) implemented in
 - [Installation](./Installation.html)
 - [How to Use](./how_to_use.html)
 - [Generate Examples](./examples.html)
-
 
 ## Content
 

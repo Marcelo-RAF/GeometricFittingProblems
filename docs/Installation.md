@@ -1,6 +1,7 @@
 ---
-layout: sidebar
+layout: default
 title: Installation Instructions
+nav_order: 2
 ---
 
 # Installation Instructions
@@ -18,6 +19,7 @@ To install it, from the Julia REPL:
 3. After the installation, press Backspace to return to the Julia REPL.
 
 4. To start using the package, simply run the following command in the terminal:
+
 ```julia
 using GeometricFittingProblems
 ```

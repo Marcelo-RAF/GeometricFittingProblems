@@ -1,0 +1,100 @@
+{"0": {
+    "doc": "Installation Instructions",
+    "title": "Installation Instructions",
+    "content": "This package is not yet in Metadata.jl, so it can’t be installed with the Julia package manager. To install it, from the Julia REPL: . | Press ] to enter the Pkg REPL mode. | Run the following command: . add https://github.com/Marcelo-RAF/GeometricFittingProblems.jl.git . | After the installation, press Backspace to return to the Julia REPL. | To start using the package, simply run the following command in the terminal: | . using GeometricFittingProblems . That’s it! Now you can start using the package. ",
+    "url": "/Installation.html",
+    
+    "relUrl": "/Installation.html"
+  },"1": {
+    "doc": "Generate Examples",
+    "title": "2D-Sphere",
+    "content": "To create a 2D sphere example, use the build_problem function with the string \"sphere2D\" and a vector containing: . | The center coordinates | The radius | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a sphere with center c = (2.0, 3.0), radius 9, containing 23 points, 2 outliers, and including noise: . build_problem(\"sphere2D\", [2.0, 3.0, 9.0, 23.0, 2.0], true) . ",
+    "url": "/examples.html#2d-sphere",
+    
+    "relUrl": "/examples.html#2d-sphere"
+  },"2": {
+    "doc": "Generate Examples",
+    "title": "3D-Sphere",
+    "content": "For 3D spheres, the process is similar to 2D spheres, with an additional center coordinate. Example: To generate a sphere with center c = (-3.0, 2.0, 1.0), radius 31, containing 80 points, 0 outliers, and no noise: . build_problem(\"sphere3D\", [-3.0, 2.0, 1.0, 31.0, 80.0, 0.0], false) . ",
+    "url": "/examples.html#3d-sphere",
+    
+    "relUrl": "/examples.html#3d-sphere"
+  },"3": {
+    "doc": "Generate Examples",
+    "title": "Planes",
+    "content": "To create examples of planes, provide: . | A point on the plane | Two non-collinear direction vectors | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a plane passing through point p = (-5.0, 2.0, -1.0) with directions v₁ = (2.0, 3.0, -1.0) and v₂ = (1.0, -3.0, 1.0), containing 120 points, 12 outliers, and including noise: . build_problem(\"plane\", [-5.0, 2.0, -1.0, 2.0, 3.0, -1.0, 1.0, -3.0, 1.0, 120, 12], true) . ",
+    "url": "/examples.html#planes",
+    
+    "relUrl": "/examples.html#planes"
+  },"4": {
+    "doc": "Generate Examples",
+    "title": "2D Lines",
+    "content": "For 2D lines, specify: . | The slope | The intercept | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a line with slope 3, intercept -8, containing 14 points, 1 outlier, and no noise: . build_problem(\"line2D\", [3.0, -8.0, 14.0, 1.0], false) . ",
+    "url": "/examples.html#2d-lines",
+    
+    "relUrl": "/examples.html#2d-lines"
+  },"5": {
+    "doc": "Generate Examples",
+    "title": "3D Lines",
+    "content": "To generate a 3D line, provide: . | A point on the line | A direction vector | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a line passing through point p = (-2.0, 0.0, 1.0) with direction vector v = (1.0, 2.0, 1.0), containing 50 points, 12 outliers, and including noise: . build_problem(\"line3D\", [-2.0, 0.0, 1.0, 1.0, 2.0, 1.0, 50.0, 12], true) . ",
+    "url": "/examples.html#3d-lines",
+    
+    "relUrl": "/examples.html#3d-lines"
+  },"6": {
+    "doc": "Generate Examples",
+    "title": "Circles",
+    "content": "To create circles, specify: . | The center | The radius | Two directions for the plane containing the circle | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a circle centered at c = (-5.0, -2.0, 15.0), radius 29, directions v₁ = (2.0, 1.0, 3.0) and v₂ = (-1.0, 2.0, 2.0), containing 25 points, 2 outliers, and no noise: . build_problem(\"circle\", [-5.0, -2.0, 15.0, 29.0, 2.0, 1.0, 3.0, -1.0, 2.0, 2.0, 25.0, 2.0], false) . ",
+    "url": "/examples.html#circles",
+    
+    "relUrl": "/examples.html#circles"
+  },"7": {
+    "doc": "Generate Examples",
+    "title": "Learn More",
+    "content": "For more details on how to use the build_problem function and how to fit geometric objects using Geometric Algebra algorithms, visit the How to Use guide. ",
+    "url": "/examples.html#learn-more",
+    
+    "relUrl": "/examples.html#learn-more"
+  },"8": {
+    "doc": "Generate Examples",
+    "title": "Generate Examples",
+    "content": "To generate examples, we will use the build_problem function, which can create artificial examples of 2D spheres, 3D spheres, 2D lines, 3D lines, planes, and circles. The input parameters for this function depend on the object to be fitted and can optionally include noise in the points. The function will generate a file with the csv extension, which will contain a matrix with the problem’s points, the number of points, the number of outliers, and whether or not it includes noise. ",
+    "url": "/examples.html",
+    
+    "relUrl": "/examples.html"
+  },"9": {
+    "doc": "How to use",
+    "title": "How to use",
+    "content": " ",
+    "url": "/how_to_use.html",
+    
+    "relUrl": "/how_to_use.html"
+  },"10": {
+    "doc": "Geometric Fitting Problems Documentation",
+    "title": "Welcome to the Geometric Fitting Problems Documentation",
+    "content": "This project aims to present algorithms in Geometric Algebra (GA) implemented in the Julia programming language. It includes an algorithm for fitting spheres using tangential distance, planes using orthogonal distance, and an algorithm capable of fitting and classifying objects. Additionally, we introduce a LOVO-CGA algorithm for solving detection problems. ",
+    "url": "/#welcome-to-the-geometric-fitting-problems-documentation",
+    
+    "relUrl": "/#welcome-to-the-geometric-fitting-problems-documentation"
+  },"11": {
+    "doc": "Geometric Fitting Problems Documentation",
+    "title": "Navigation",
+    "content": ". | Home | Installation | How to Use | Generate Examples | . ",
+    "url": "/#navigation",
+    
+    "relUrl": "/#navigation"
+  },"12": {
+    "doc": "Geometric Fitting Problems Documentation",
+    "title": "Content",
+    "content": "Explore detailed guides and examples below. ",
+    "url": "/#content",
+    
+    "relUrl": "/#content"
+  },"13": {
+    "doc": "Geometric Fitting Problems Documentation",
+    "title": "Geometric Fitting Problems Documentation",
+    "content": " ",
+    "url": "/",
+    
+    "relUrl": "/"
+  }
+}
