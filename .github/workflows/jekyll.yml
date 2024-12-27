@@ -3,7 +3,7 @@ name: Build and Deploy Jekyll
 on:
   push:
     branches:
-      - main # Altere para sua branch principal, se necessário
+      - main # Substitua pela branch principal do seu repositório, se necessário
 
 jobs:
   build-deploy:
@@ -20,10 +20,12 @@ jobs:
           bundler-cache: true
 
       - name: Install dependencies
+        working-directory: ./docs
         run: bundle install
 
       - name: Build site
-        run: bundle exec jekyll build --source docs --destination _site
+        working-directory: ./docs
+        run: bundle exec jekyll build --destination ../_site
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
