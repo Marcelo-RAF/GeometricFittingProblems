@@ -1,6 +1,7 @@
 source 'https://rubygems.org'
 
-gem 'jekyll' 
-gem 'jekyll-theme-cayman'
+gem "github-pages", group: :jekyll_plugins
+gem "just-the-docs"
+gem 'wdm', '>= 0.1.0', :platforms => [:mswin, :mingw]
 gem 'csv'
 gem 'base64'
