@@ -2,7 +2,5 @@ source 'https://rubygems.org'
 
 gem 'jekyll' 
 gem 'just-the-docs'
-gem 'sass'
-gem 'wdm', '>= 0.1.0', platforms: [:mswin, :mingw]
 gem 'csv'
 gem 'base64'
