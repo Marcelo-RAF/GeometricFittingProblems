@@ -10,7 +10,7 @@ This project aims to present algorithms in Geometric Algebra (GA) implemented in
 ## Navigation
 
 - [Home](./index.html)
-- [Installation](./installation.html)
+- [Installation](./Installation.html)
 - [How to Use](./how_to_use.html)
 - [Generate Examples](./examples.html)
 
