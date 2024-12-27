@@ -43,7 +43,7 @@
   },"6": {
     "doc": "Generate Examples",
     "title": "Circles",
-    "content": "To create circles, specify: . | The center | The radius | Two directions for the plane containing the circle | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a circle centered at c = (-5.0, -2.0, 15.0), radius 29, directions v₁ = (2.0, 1.0, 3.0) and v₂ = (-1.0, 2.0, 2.0), containing 25 points, 2 outliers, and no noise: . build_problem(\"circle\", [-5.0, -2.0, 15.0, 29.0, 2.0, 1.0, 3.0, -1.0, 2.0, 2.0, 25.0, 2.0], false) . ",
+    "content": "To create circles, specify: . | The center | The radius | Two directions for the plane containing the circle | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a circle centered at c = (-5.0, -2.0, 15.0), radius 29, directions v₁ = (2.0, 1.0, 3.0) and v₂ = (-1.0, 2.0, 2.0), containing 25 points, 2 outliers, and no noise: . build_problem(\"circle\", [-5.0, -2.0, 15.0, 29.0, 2.0, 1.0, 3.0, -1.0, 2.0, 2.0, 25.0, 2.0], false) . Para carregar os exemplos criados, basta digitar . ",
     "url": "/examples.html#circles",
     
     "relUrl": "/examples.html#circles"
@@ -69,29 +69,29 @@
     
     "relUrl": "/how_to_use.html"
   },"10": {
-    "doc": "Geometric Fitting Problems Documentation",
+    "doc": "Home",
     "title": "Welcome to the Geometric Fitting Problems Documentation",
     "content": "This project aims to present algorithms in Geometric Algebra (GA) implemented in the Julia programming language. It includes an algorithm for fitting spheres using tangential distance, planes using orthogonal distance, and an algorithm capable of fitting and classifying objects. Additionally, we introduce a LOVO-CGA algorithm for solving detection problems. ",
     "url": "/#welcome-to-the-geometric-fitting-problems-documentation",
     
     "relUrl": "/#welcome-to-the-geometric-fitting-problems-documentation"
   },"11": {
-    "doc": "Geometric Fitting Problems Documentation",
+    "doc": "Home",
     "title": "Navigation",
     "content": ". | Home | Installation | How to Use | Generate Examples | . ",
     "url": "/#navigation",
     
     "relUrl": "/#navigation"
   },"12": {
-    "doc": "Geometric Fitting Problems Documentation",
+    "doc": "Home",
     "title": "Content",
     "content": "Explore detailed guides and examples below. ",
     "url": "/#content",
     
     "relUrl": "/#content"
   },"13": {
-    "doc": "Geometric Fitting Problems Documentation",
-    "title": "Geometric Fitting Problems Documentation",
+    "doc": "Home",
+    "title": "Home",
     "content": " ",
     "url": "/",
     

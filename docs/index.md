@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Geometric Fitting Problems Documentation"
+title: "Home"
 nav_order: 1
 ---
 
