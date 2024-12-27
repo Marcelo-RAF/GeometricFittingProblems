@@ -3,7 +3,7 @@ name: Build and Deploy Jekyll
 on:
   push:
     branches:
-      - main # Altere para sua branch principal, se necessário
+      - main # Substitua pela branch principal, se necessário
 
 jobs:
   build-deploy:
@@ -13,8 +13,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1" # Escolha uma versão compatível com seu projeto
+          bundler-cache: true
+
+      - name: Install Bundler
+        run: gem install bundler
+
+      - name: Install dependencies
+        working-directory: ./docs
+        run: bundle install
+
       - name: Build site
-        run: bundle exec jekyll build --source ./docs --destination ./docs/_site
+        working-directory: ./docs
+        run: bundle exec jekyll build --source . --destination ./_site
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
