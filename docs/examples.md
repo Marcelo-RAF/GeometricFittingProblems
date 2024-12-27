@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: sidebar
 title: Generate Examples
 ---
 
