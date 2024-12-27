@@ -103,6 +103,8 @@ For a circle centered at **c = (-5.0, -2.0, 15.0)**, radius **29**, directions *
 build_problem("circle", [-5.0, -2.0, 15.0, 29.0, 2.0, 1.0, 3.0, -1.0, 2.0, 2.0, 25.0, 2.0], false)
 ```
 
+Para carregar os exemplos criados, basta digitar
+
 # Learn More
 
 For more details on how to use the `build_problem` function and how to fit geometric objects using Geometric Algebra algorithms, visit the [How to Use](how_to_use.md) guide.
