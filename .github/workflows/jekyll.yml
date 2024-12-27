@@ -1,23 +1,35 @@
-name: Build and Deploy Jekyll Site
+name: Build and Deploy Jekyll
+
 on:
   push:
     branches:
-      - main
+      - main # Substitua pela branch principal do seu repositório, se necessário
+
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "2.7"
+          ruby-version: "3.1" # Define a versão do Ruby como 3.1 ou superior
+          bundler-cache: true
+
       - name: Install Bundler
         run: gem install bundler
-      - name: Install Dependencies
+
+      - name: Install dependencies
+        working-directory: ./docs
         run: bundle install
-      - name: Build Site
-        run: bundle exec jekyll build --source ./docs --destination ./docs/_site
+
+      - name: Build site
+        working-directory: ./docs
+        run: bundle exec jekyll build --source . --destination ./_site
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
