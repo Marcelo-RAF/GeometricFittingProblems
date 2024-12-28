@@ -16,19 +16,25 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.2" # Atualize para a versão 3.2 ou superior
+          ruby-version: "3.1"
           bundler-cache: true
 
       - name: Install dependencies
-        working-directory: ./docs
-        run: |
-          bundle config set path 'vendor/bundle'
-          bundle install
+        run: bundle install
 
       - name: Build site
-        working-directory: ./docs
-        run: bundle exec jekyll build --source . --destination ../_site
+        run: bundle exec jekyll build --source ./docs --destination ./_site
 
+      # Limpa o branch gh-pages antes do deploy
+      - name: Clean up previous deployment
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages || git checkout --orphan gh-pages
+          git rm -rf .
+          git commit -m "Clean up old deployment" || echo "Nothing to clean"
+          git push origin gh-pages --force
+
+      # Publica os arquivos no branch gh-pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
