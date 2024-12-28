@@ -20,6 +20,7 @@ jobs:
           bundler-cache: true
 
       - name: Install dependencies
+        working-directory: ./docs
         run: bundle install
 
       - name: Build site
