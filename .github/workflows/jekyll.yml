@@ -14,7 +14,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Ruby
-        run: gem install bundler:2.6.2
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2" # Atualize para a versão 3.2 ou superior
+          bundler-cache: true
 
       - name: Install dependencies
         working-directory: ./docs
