@@ -21,20 +21,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./docs
-        run: |
-          bundle install
-          gem install jekyll
+        run: bundle install
 
       - name: Build site
-        run: bundle exec jekyll build --source ./docs --destination ./_site
-
-      - name: Clean up previous deployment
-        run: |
-          git fetch origin gh-pages
-          git checkout gh-pages || git checkout --orphan gh-pages
-          git rm -rf .
-          git commit -m "Clean up old deployment" || echo "Nothing to clean"
-          git push origin gh-pages --force
+        working-directory: ./docs
+        run: bundle exec jekyll build --trace --destination ../_site
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
