@@ -75,7 +75,7 @@ PLATFORMS
   x64-mingw-ucrt
 
 DEPENDENCIES
-  jekyll (~> 4.3.0)
+  jekyll (~> 4.3.4)
   just-the-docs (~> 0.5.4)
   wdm (>= 0.1.0)
 
