@@ -21,7 +21,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./docs
-        run: bundle install
+        run: |
+          gem install bundler
+          bundle install
+          gem install jekyll
 
       - name: Build site
         working-directory: ./docs
