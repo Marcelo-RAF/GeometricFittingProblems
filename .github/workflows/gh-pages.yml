@@ -28,4 +28,4 @@ jobs:
 
       - name: Build site
         working-directory: ./docs
-        run: bundle exec jekyll build --trace --destination ./docs/_site
+        run: bundle exec jekyll build --trace --destination _site
