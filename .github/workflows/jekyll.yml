@@ -28,10 +28,5 @@ jobs:
 
       - name: Build site
         working-directory: ./docs
-        run: bundle exec jekyll build --trace --destination ../_site
+        run: bundle exec jekyll build --trace --destination ./docs/_site
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
