@@ -12,9 +12,14 @@ This project aims to present algorithms in Geometric Algebra (GA) implemented in
 
 - [Home](./index.html)
 - [Installation](./Installation.html)
-- [How to Use](./how_to_use.html)
 - [Generate Examples](./examples.html)
+- [How to Use](./how_to_use.html)
 
-## Content
 
-Explore detailed guides and examples below.
+This project was developed by:
+
+Marcelo Renan Augusto Ferreira;
+
+Emerson Vitor Castelani;
+
+Wesley Vagner Inês Shirabayashi.
