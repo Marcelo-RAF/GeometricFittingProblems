@@ -14,96 +14,117 @@
     "relUrl": "/examples.html#generate-and-load-problems"
   },"2": {
     "doc": "Generate and Load Examples",
+    "title": "Syntax",
+    "content": "build_problem(probtype::String, params::Vector{Float64}, noise::Bool) . ",
+    "url": "/GeometricFittingProblems/examples.html#syntax",
+    
+    "relUrl": "/examples.html#syntax"
+  },"3": {
+    "doc": "Generate and Load Examples",
     "title": "2D-Sphere",
-    "content": "To create a 2D sphere example, use the build_problem function with the string \"sphere2D\" and a vector containing: . | The center coordinates | The radius | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a sphere with center c = (2.0, 3.0), radius 9, containing 23 points, 2 outliers, and including noise: . julia&gt; build_problem(\"sphere2D\", [2.0, 3.0, 9.0, 23.0, 2.0], true) . ",
+    "content": "To create a 2D sphere example, use the build_problem function with the string “sphere2D” and a vector containing: . | The center coordinates | The radius | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example . For a sphere with center c = (2.0, 3.0), radius 9, containing 23 points, 2 outliers, and including noise: . julia&gt; build_problem(\"sphere2D\", [2.0, 3.0, 9.0, 23.0, 2.0], true) . ",
     "url": "/GeometricFittingProblems/examples.html#2d-sphere",
     
     "relUrl": "/examples.html#2d-sphere"
-  },"3": {
+  },"4": {
     "doc": "Generate and Load Examples",
     "title": "3D-Sphere",
-    "content": "For 3D spheres, the process is similar to 2D spheres, with an additional center coordinate. Example: To generate a sphere with center c = (-3.0, 2.0, 1.0), radius 31, containing 80 points, 0 outliers, and no noise: . julia&gt; build_problem(\"sphere3D\", [-3.0, 2.0, 1.0, 31.0, 80.0, 0.0], false) . ",
+    "content": "For 3D spheres, the process is similar to 2D spheres, with an additional center coordinate. Example . To generate a sphere with center c = (-3.0, 2.0, 1.0), radius 31, containing 80 points, 0 outliers, and no noise: . julia&gt; build_problem(\"sphere3D\", [-3.0, 2.0, 1.0, 31.0, 80.0, 0.0], false) . ",
     "url": "/GeometricFittingProblems/examples.html#3d-sphere",
     
     "relUrl": "/examples.html#3d-sphere"
-  },"4": {
+  },"5": {
     "doc": "Generate and Load Examples",
     "title": "Planes",
-    "content": "To create examples of planes, provide: . | A point on the plane | Two non-collinear direction vectors | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a plane passing through point p = (-5.0, 2.0, -1.0) with directions v₁ = (2.0, 3.0, -1.0) and v₂ = (1.0, -3.0, 1.0), containing 120 points, 12 outliers, and including noise: . julia&gt; build_problem(\"plane\", [-5.0, 2.0, -1.0, 2.0, 3.0, -1.0, 1.0, -3.0, 1.0, 120, 12], true) . ",
+    "content": "To create examples of planes, provide: . | A point on the plane | Two non-collinear direction vectors | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example . For a plane passing through point p = (-5.0, 2.0, -1.0) with directions v₁ = (2.0, 3.0, -1.0) and v₂ = (1.0, -3.0, 1.0), containing 120 points, 12 outliers, and including noise: . julia&gt; build_problem(\"plane\", [-5.0, 2.0, -1.0, 2.0, 3.0, -1.0, 1.0, -3.0, 1.0, 120, 12], true) . ",
     "url": "/GeometricFittingProblems/examples.html#planes",
     
     "relUrl": "/examples.html#planes"
-  },"5": {
+  },"6": {
     "doc": "Generate and Load Examples",
     "title": "2D Lines",
-    "content": "For 2D lines, specify: . | The slope | The intercept | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a line with slope 3, intercept -8, containing 14 points, 1 outlier, and no noise: . julia&gt; build_problem(\"line2D\", [3.0, -8.0, 14.0, 1.0], false) . ",
+    "content": "For 2D lines, specify: . | The slope | The intercept | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example . For a line with slope 3, intercept -8, containing 14 points, 1 outlier, and no noise: . julia&gt; build_problem(\"line2D\", [3.0, -8.0, 14.0, 1.0], false) . ",
     "url": "/GeometricFittingProblems/examples.html#2d-lines",
     
     "relUrl": "/examples.html#2d-lines"
-  },"6": {
+  },"7": {
     "doc": "Generate and Load Examples",
     "title": "3D Lines",
-    "content": "To generate a 3D line, provide: . | A point on the line | A direction vector | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a line passing through point p = (-2.0, 0.0, 1.0) with direction vector v = (1.0, 2.0, 1.0), containing 50 points, 12 outliers, and including noise: . julia&gt; build_problem(\"line3D\", [-2.0, 0.0, 1.0, 1.0, 2.0, 1.0, 50.0, 12], true) . ",
+    "content": "To generate a 3D line, provide: . | A point on the line | A direction vector | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example . For a line passing through point p = (-2.0, 0.0, 1.0) with direction vector v = (1.0, 2.0, 1.0), containing 50 points, 12 outliers, and including noise: . julia&gt; build_problem(\"line3D\", [-2.0, 0.0, 1.0, 1.0, 2.0, 1.0, 50.0, 12], true) . ",
     "url": "/GeometricFittingProblems/examples.html#3d-lines",
     
     "relUrl": "/examples.html#3d-lines"
-  },"7": {
+  },"8": {
     "doc": "Generate and Load Examples",
     "title": "Circles",
-    "content": "To create circles, specify: . | The center | The radius | Two directions for the plane containing the circle | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example: For a circle centered at c = (-5.0, -2.0, 15.0), radius 29, directions v₁ = (2.0, 1.0, 3.0) and v₂ = (-1.0, 2.0, 2.0), containing 25 points, 2 outliers, and no noise: . julia&gt; build_problem(\"circle\", [-5.0, -2.0, 15.0, 29.0, 2.0, 1.0, 3.0, -1.0, 2.0, 2.0, 25.0, 2.0], false) . ",
+    "content": "To create circles, specify: . | The center | The radius | Two directions for the plane containing the circle | The number of points | The number of outliers | A boolean indicating whether to include noise | . Example . For a circle centered at c = (-5.0, -2.0, 15.0), radius 29, directions v₁ = (2.0, 1.0, 3.0) and v₂ = (-1.0, 2.0, 2.0), containing 25 points, 2 outliers, and no noise: . julia&gt; build_problem(\"circle\", [-5.0, -2.0, 15.0, 29.0, 2.0, 1.0, 3.0, -1.0, 2.0, 2.0, 25.0, 2.0], false) . ",
     "url": "/GeometricFittingProblems/examples.html#circles",
     
     "relUrl": "/examples.html#circles"
-  },"8": {
+  },"9": {
     "doc": "Generate and Load Examples",
     "title": "Loading Problems",
-    "content": "To load a problem generated by the build_problem function, navigate to the directory where the problem was created and use the load_problem function. Example: . CSuppose the generated file is named sphere2D_-2.0_3.0_9.0_15.0_2.csv, To work with this file, assign the problem to a variable, such as prob. Open the terminal and type: . julia&gt; prob = load_problem(sphere2D_-2.0_3.0_9.0_15.0_2.csv) . With this setup, you can use the commands prob.data, prob.npts and prob.nout, to access the problem’s point matrix, the number of points, and the number of outliers, respectively. ",
+    "content": "To load a problem generated by the build_problem function, navigate to the directory where the problem was created and use the load_problem function. Example . Suppose the generated file is named sphere2D_-2.0_3.0_9.0_15.0_2.csv. To work with this file, assign the problem to a variable, such as prob. Open the terminal and type: . julia&gt; prob = load_problem(\"sphere2D_-2.0_3.0_9.0_15.0_2.csv\") . With this setup, you can use the commands prob.data, prob.npts, and prob.nout to access the problem’s point matrix, the number of points, and the number of outliers, respectively. ",
     "url": "/GeometricFittingProblems/examples.html#loading-problems",
     
     "relUrl": "/examples.html#loading-problems"
-  },"9": {
+  },"10": {
     "doc": "Generate and Load Examples",
     "title": "Learn More",
     "content": "For more details on how to use the build_problem function and how to fit geometric objects using Geometric Algebra algorithms, visit the How to Use guide. ",
     "url": "/GeometricFittingProblems/examples.html#learn-more",
     
     "relUrl": "/examples.html#learn-more"
-  },"10": {
+  },"11": {
     "doc": "Generate and Load Examples",
     "title": "Generate and Load Examples",
     "content": " ",
     "url": "/GeometricFittingProblems/examples.html",
     
     "relUrl": "/examples.html"
-  },"11": {
+  },"12": {
     "doc": "How to use",
     "title": "How to use",
-    "content": "This section introduces three fitting algorithms: AGCGA, proposed in …, AACGA, proposed in …, and the algorithm we propose in this work, ICGA. Additionally, we present a combined fitting and classification algorithm, fittingclass, and a detection algorithm, LOVO-CGA. Fitting . To use any of the fitting algorithms, you need a matrix containing a set of points, where each row represents a point in Euclidean space, and the target object to fit specified as a string. Supported objects include: sphere, plane, circle, line. Example . Consider a matrix $D$ representing a set of points from a sphere. You can fit the object as follows: . julia&gt; ICGA(D, \"sphere\") . Fitting and Classification . To use the fittingclass, algorithm, provide a matrix containing a set of points corresponding to the object set $Q$ = {hyperspheres, hyperplanes, hypercircles, lines} and two threshold values, $\\varepsilon_1$ and $\\varepsilon_2$. Para ruídos criados por uma distribuição normal, os testes feitos com $\\varepsilon_1 = 1.0$ e $\\varepsilon_2 = 10e-3$ se mostraram com bons resultados. Example . Consider a matrix D representing a set of points. You can apply the algorithm as follows: . julia&gt; fittingclass(D, 1.0, 10e-3) . Detection . LOVOCGA(data::Matrix, nout::Int, θ::Vector, method::string, object::string, ε=1.0e-4) . Para a detecção de objetos do conjunto $Q$ = {hyperspheres, hyperplanes, hypercircles, lines}, utilizaremos a função LOVOCGA. Os parâmetros de entrada são: matriz de pontos, quantidade de outliers do problema, chute inicial, o método a ser utilizado e o objeto a ser detectado. Example . Considere uma matriz $D$ representando um conjunto de 20 pontos de um círculo, em que 4 deles são outliers. Podemos então fazer: . julia&gt; LOVOCGA(D, 4, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], \"AGCGA\", \"circle\", ε=1.0e-4) . ",
+    "content": "This section introduces three fitting algorithms: AGCGA, proposed in …, AACGA, proposed in …, and the algorithm we propose in this work, ICGA. Additionally, we present a combined fitting and classification algorithm, fittingclass, and a detection algorithm, LOVO-CGA. ",
     "url": "/GeometricFittingProblems/how_to_use.html",
     
     "relUrl": "/how_to_use.html"
-  },"12": {
+  },"13": {
+    "doc": "How to use",
+    "title": "Fitting",
+    "content": "To use any of the fitting algorithms, you need a matrix containing a set of points, where each row represents a point in Euclidean space, and the target object to fit specified as a string. Supported objects include: sphere, plane, circle, line. Syntax . ICGA(data::Matrix, object::String) . Example . Consider a matrix D representing a set of points from a sphere. You can fit the object as follows: . julia&gt; ICGA(D, \"sphere\") . ",
+    "url": "/GeometricFittingProblems/how_to_use.html#fitting",
+    
+    "relUrl": "/how_to_use.html#fitting"
+  },"14": {
+    "doc": "How to use",
+    "title": "Fitting and Classification",
+    "content": "To use the fittingclass algorithm, provide a matrix containing a set of points corresponding to the object set Q = {hyperspheres, hyperplanes, hypercircles, lines} and two threshold values, ε₁ and ε₂. For noise generated by a normal distribution, tests conducted with ε₁ = 1.0 and ε₂ = 10e-3 showed good results. Syntax . fittingclass(data::Matrix, ε₁::Float64, ε₂::Float64) . Example . Consider a matrix D representing a set of points. You can apply the algorithm as follows: . julia&gt; fittingclass(D, 1.0, 10e-3) . ",
+    "url": "/GeometricFittingProblems/how_to_use.html#fitting-and-classification",
+    
+    "relUrl": "/how_to_use.html#fitting-and-classification"
+  },"15": {
+    "doc": "How to use",
+    "title": "Detection",
+    "content": "To detect objects in the set Q = {hyperspheres, hyperplanes, hypercircles, lines}, use the function LOVOCGA. The input parameters are: a matrix of points, the number of outliers, an initial guess, the method to be used, the object to be detected, and an optional threshold ε (default: 1.0e-4). Syntax . LOVOCGA(data::Matrix, nout::Int, θ::Vector, method::String, object::String, ε=1.0e-4) . Example . Consider a matrix D representing a set of 20 points from a circle, where 4 of them are outliers. You can proceed as follows: . julia&gt; LOVOCGA(D, 4, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], \"AGCGA\", \"circle\", ε=1.0e-4) . ",
+    "url": "/GeometricFittingProblems/how_to_use.html#detection",
+    
+    "relUrl": "/how_to_use.html#detection"
+  },"16": {
     "doc": "Home",
     "title": "Welcome to the Geometric Fitting Problems Documentation",
     "content": "This project aims to present algorithms in Geometric Algebra (GA) implemented in the Julia programming language. It includes an algorithm for fitting spheres using tangential distance, planes using orthogonal distance, and an algorithm capable of fitting and classifying objects. Additionally, we introduce a LOVO-CGA algorithm for solving detection problems. ",
     "url": "/GeometricFittingProblems/#welcome-to-the-geometric-fitting-problems-documentation",
     
     "relUrl": "/#welcome-to-the-geometric-fitting-problems-documentation"
-  },"13": {
+  },"17": {
     "doc": "Home",
     "title": "Navigation",
-    "content": ". | Home | Installation | How to Use | Generate Examples | . ",
+    "content": ". | Home | Installation | Generate Examples | How to Use | . This project was developed by: . Marcelo Renan Augusto Ferreira; . Emerson Vitor Castelani; . Wesley Vagner Inês Shirabayashi. ",
     "url": "/GeometricFittingProblems/#navigation",
     
     "relUrl": "/#navigation"
-  },"14": {
-    "doc": "Home",
-    "title": "Content",
-    "content": "Explore detailed guides and examples below. ",
-    "url": "/GeometricFittingProblems/#content",
-    
-    "relUrl": "/#content"
-  },"15": {
+  },"18": {
     "doc": "Home",
     "title": "Home",
     "content": " ",
