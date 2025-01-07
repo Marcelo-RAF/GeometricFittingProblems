@@ -6,7 +6,7 @@ nav_order: 4
 
 # How to use
 
-This section introduces three fitting algorithms: `AGCGA`, proposed in ..., `AACGA`, proposed in ..., and the algorithm we propose in this work, `ICGA`. Additionally, we present a combined fitting and classification algorithm, `fittingclass`, and a detection algorithm, `LOVO-CGA`.
+This section introduces three fitting algorithms: `AGCGA`, proposed in [1](https://link.springer.com/article/10.1007/s10851-014-0495-2), `AACGA`, proposed in [2](https://link.springer.com/book/10.1007/978-3-642-31794-1), and the algorithm we propose in this work, `ICGA`. Additionally, we present a combined fitting and classification algorithm, `fittingclass`, and a detection algorithm, `LOVO-CGA`.
 
 ## Fitting
 
@@ -61,4 +61,3 @@ Consider a matrix `D` representing a set of 20 points from a circle, where 4 of 
 ```julia
 julia> LOVOCGA(D, 4, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], "AGCGA", "circle", ε=1.0e-4)
 ```
-

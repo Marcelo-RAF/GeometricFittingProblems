@@ -130,7 +130,3 @@ julia> prob = load_problem("sphere2D_-2.0_3.0_9.0_15.0_2.csv")
 ```
 
 With this setup, you can use the commands `prob.data`, `prob.npts`, and `prob.nout` to access the problem's point matrix, the number of points, and the number of outliers, respectively.
-
-# Learn More
-
-For more details on how to use the `build_problem` function and how to fit geometric objects using Geometric Algebra algorithms, visit the [How to Use](how_to_use.md) guide.

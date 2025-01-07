@@ -13,7 +13,7 @@ To install it, from the Julia REPL:
 2. Run the following command:
 
    ```julia
-   pkg> add https://github.com/Marcelo-RAF/GeometricFittingProblems.jl.git
+   pkg> add https://github.com/Marcelo-RAF/GeometricFittingProblems.git
    ```
 
 3. After the installation, press Backspace to return to the Julia REPL.
