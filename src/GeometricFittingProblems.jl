@@ -707,7 +707,7 @@ function fittingclass(data, ε1, ε2)
     if λ2 - λ1 > ε1
         s1 = transphere(v1)
         if 1 / s1[end] > ε2
-            println("uma esfera")
+            println("sphere")
             return s1
         else
             B = IM[1:end-2, 1:end-2]
@@ -718,7 +718,7 @@ function fittingclass(data, ε1, ε2)
             vn = F.vectors[:, 1]
             d = -(u' * vn) / a
             π = [vn; d]
-            println("um plano")
+            println("hyperplane")
             return π
         end
     else
@@ -734,7 +734,7 @@ function fittingclass(data, ε1, ε2)
                 vn = F.vectors[:, 1]
                 d = -(u' * vn) / a
                 π = [vn; d]
-                println("círculo como intersecção da esfera e plano")
+                println("hypercircle")
                 return s1, π
             end
         else
@@ -749,7 +749,7 @@ function fittingclass(data, ε1, ε2)
             d2 = -(u' * vn2) / a
             π = [vn; d]
             π2 = [vn2; d2]
-            println("reta como intersecção dos planos")
+            println("line")
             return π, π2
         end
     end

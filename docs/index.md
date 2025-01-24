@@ -22,4 +22,6 @@ Marcelo Renan Augusto Ferreira;
 
 Emerson Vitor Castelani;
 
-Wesley Vagner Inês Shirabayashi.
+Wesley Vagner Inês Shirabayashi;
+
+Felipe Fidalgo.
