@@ -97,7 +97,7 @@ function AGCGA(data, object::String, ε=1.0e-5) #algoritmo dorst esferas
     P = p .* (DDt)
     F = eigen(P)
     if object == "sphere" || object == "plane"
-        return F.vectors[:, 2]
+        return F.vectors[:, 2], F.values[2], F.values[3]
     end
     if object == "line" || object == "circle"
         return F.vectors[:, 2], F.vectors[:, 3]
@@ -140,6 +140,7 @@ function AACGA(data, object::String, ε=1.0e-5)
     (N, n) = size(data)
     v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
     D = [data'; -ones(1, N); v']
+    return D
     Dd = simetrica(D)
     F = eigen(Dd)
     indmin = 1
@@ -165,10 +166,6 @@ function AACGA(data, object::String, ε=1.0e-5)
     else
         return nullspace(Dd)
     end
-    #xnorm = (1.0 / (F.vectors[:, indmin][end])) * F.vectors[:, indmin]
-    #center = xnorm[1:end-2]
-
-    #push!(center, √(norm(center, 2)^2 - 2.0 * xnorm[end-1]))
 end
 
 """
@@ -202,17 +199,18 @@ function ICGA(data, object::String)
     if object == "plane"
         B = Dd[1:end-2, 1:end-2]
         u = Dd[1:end-2, end-1]
-        w = Dd[1:end-2, end]
         a = Dd[end-1, end-1]
         a2 = Dd[end-1, end]
         H = B - (u * u') / a
         F = eigen(H)
         vn = F.vectors[:, 1]
+        λ1 = F.values[1]
+        λ2 = F.values[2]
         d = -(u' * vn) / a
         π = [vn; d; 0]
         #coef = (-w'*vn)/a2
 
-        return π#, coef
+        return π, λ1, λ2#, coef
     end
     if object == "reta"
         B = Dd[1:end-2, 1:end-2]
@@ -221,13 +219,16 @@ function ICGA(data, object::String)
         a2 = Dd[end-1, end]
         H = B - (u * u') / a
         F = eigen(H)
+        display(F)
         vn = F.vectors[:, 1]
         vn2 = F.vectors[:, 2]
+        λ1 = F.values[1]
+        λ2 = F.values[2]
         d = -(u' * vn) / a
         d2 = -(u' * vn2) / a
-        π = [vn; d]
-        pi2 = [vn2; d2]
-        return π, pi2
+        π = [vn; d; 0]
+        pi2 = [vn2; d2; 0]
+        return hcat(π, pi2), λ1, λ2
     end
     if object == "circle"
         B = Dd[1:end-2, 1:end-2]
@@ -237,14 +238,11 @@ function ICGA(data, object::String)
         F = eigen(H)
         vn = F.vectors[:, 1]
         d = -(u' * vn) / a
-        π = [vn; d]
+        π = [vn; d; 0]
         Px = copy(Dd)
         Px[end, :] .= 0.0
         np = nullspace(Px)
-        #np = np / np[end]
-        #centernp = np[1:end-2]
-        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-        return π, np
+        return hcat(np, π)
     end
 end
 
@@ -277,7 +275,7 @@ function conformalsort(P, x, nout)
     end
     #    println(indtrust[n-nout+1:n])
 
-    return P[indtrust[1:m-nout], :], sum(h[1:m-nout])
+    return P[indtrust[1:m-nout], :], sum(h[1:m-nout]), P[indtrust[(m-nout)+1:m], :]
 end
 
 function conformalsort2(P, x, y, nout)
@@ -294,7 +292,7 @@ function conformalsort2(P, x, y, nout)
             h1[i] = h1[i] + D[i, j] * x[j]
             h2[i] = h2[i] + D[i, j] * y[j]
         end
-        h[i] = (h1[i] - x[end-1] - x[end] * v[i])^2 + (h2[i] - y[end-1] - y[end] * v[i])^2
+        h[i] = ((h1[i] - x[end-1] - x[end] * v[i])^2 + (h2[i] - y[end-1] - y[end] * v[i])^2) / 2
     end
     indtrust = [1:m;]
     for i = 1:m-nout+1
@@ -312,7 +310,7 @@ function conformalsort2(P, x, y, nout)
     end
     #    println(indtrust[n-nout+1:n])
 
-    return P[indtrust[1:m-nout], :], sum(h[1:m-nout])
+    return P[indtrust[1:m-nout], :], sum(h[1:m-nout]), P[indtrust[(m-nout)+1:m], :]
 end
 
 
@@ -337,25 +335,62 @@ function LOVOCGA(data, nout, θ, name, object, ε=1.0e-4)
     ordres = conformalsort(data, θ, nout)
     k = 1
     antres = 0.0
+    eig1 = 0.0
+    eig2 = 0.0
     while abs(ordres[2] - antres) > ε && k < 100
         antres = ordres[2]
         if name == "AACGA"
             θ = AACGA(ordres[1], object)
+            ordres = conformalsort(data, θ, nout)
         end
         if name == "AGCGA"
-            θ = AGCGA(ordres[1], object)
+            θ, eig1, eig2 = AGCGA(ordres[1], object)
+            ordres = conformalsort(data, θ, nout)
         end
         if name == "ICGA"
             θ = ICGA(ordres[1], object)
+            if size(θ, 2) == 2
+                ordres = conformalsort2(data, θ[:, 1], θ[:, 2], nout)
+            else
+                ordres = conformalsort(data, θ, nout)
+            end
         end
+        k = k + 1
+    end
+    return θ, eig1, eig2, k, ordres[2], ordres[1], ordres[3]
+end
+
+function LOVOAGCGA(data, nout, θ, object, ε=1.0e-4)
+    ordres = conformalsort(data, θ, nout)
+    k = 1
+    antres = 0.0
+    eig1 = 0.0
+    eig2 = 0.0
+    while abs(ordres[2] - antres) > ε && k < 100
+        antres = ordres[2]
+        θ, eig1, eig2 = AGCGA(ordres[1], object)
         ordres = conformalsort(data, θ, nout)
         k = k + 1
     end
-    return θ, k, ordres[1], ordres[2]
+    return θ, eig1, eig2, ordres[2]
 end
 
-function intersect_rows(A, B)
-    return [row for row in eachrow(A) if row in eachrow(B)]
+function LOVOICGA(data, nout, θ, object, ε=1.0e-4)
+    ordres = conformalsort(data, θ, nout)
+    k = 1
+    antres = 0.0
+    λ1 = 0.0
+    λ2 = 0.0
+    while abs(ordres[2] - antres) > ε && k < 100
+        antres = ordres[2]
+        θ, λ1, λ2 = ICGA(ordres[1], object)
+        if size(θ, 2) == 2
+            ordres = conformalsort(data, θ[:, 1], nout)
+        else
+            ordres = conformalsort2(data, θ[:, 1], θ[:,2], nout)
+        end
+    end
+    return θ, λ1, λ2#, ordres[2]
 end
 
 
@@ -365,22 +400,6 @@ function transphere(np)
     hj = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * npnorm[end-1]))
     return hj
 end
-
-
-function solve(prob::FitProbType, method::String)
-    if method == "CGA-Hypersphere"
-        return CGAHypersphere(prob.data)
-    end
-    if method == "LOVO-CGA-Geometric"
-        initθ = CGAHypersphere(prob.data, "nullspace")
-        return LOVOConformal(prob.data, prob.nout, initθ, "geometric")
-    end
-    if method == "LOVO-CGA-Algebraic"
-        initθ = hildebran(prob.data, "nullspace")
-        return LOVOConformal(prob.data, prob.nout, initθ, "algebraic")
-    end
-end
-
 
 """
 build_problem(probtype::String, limit::Vector{Float64}, params::Vector{Float64})
@@ -495,17 +514,7 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
         u = [params[4], params[5], params[6]]
         v = [params[7], params[8], params[9]]
         npts = Int(params[10])
-        #λ = rand(Uniform(-500, 500), npts)  # Amostragem uniforme
-        #μ = rand(Uniform(-500, 500), npts)
-        # Gerando pontos espalhados no plano de maneira uniforme
-        escala = 50  # Ajuste este valor para espalhar mais ou menos os pontos
-        r = sqrt.(rand(npts)) .* escala  # Raio aleatório (para dispersão circular uniforme)
-        theta = rand(Uniform(0, 2π), npts)  # Ângulo aleatório
-
-        # Convertendo coordenadas polares para sistema do plano (usando vetores u e v)
-        λ = r .* cos.(theta)
-        μ = r .* sin.(theta)
-        pp = range(-10.0, stop=10.0, length=npts)
+        pp = range(-50.0, stop=50.0, length=npts)
         x = zeros(npts)
         y = zeros(npts)
         z = zeros(npts)
@@ -518,11 +527,11 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
         sgn = sign(randn())
         if noise == true
             for i = 1:npts
-                #λ = rand(pp)
-                #μ = rand(pp)
-                x[i] = p0[1] + λ[i] * u[1] + μ[i] * v[1] + 10 * ruid[1, i]
-                y[i] = p0[2] + λ[i] * u[2] + μ[i] * v[2] + 10 * ruid[2, i]
-                z[i] = p0[3] + λ[i] * u[3] + μ[i] * v[3] + 10 * ruid[3, i]
+                λ = rand(pp)
+                μ = rand(pp)
+                x[i] = p0[1] + λ * u[1] + μ * v[1] + ruid[1, i]
+                y[i] = p0[2] + λ * u[2] + μ * v[2] + ruid[2, i]
+                z[i] = p0[3] + λ * u[3] + μ * v[3] + ruid[3, i]
             end
         else
             for i = 1:npts
@@ -543,7 +552,7 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
                 k = k + 1
             end
         end
-        pt = 50
+        pt = 500
         for k = 1:nout
             x[iout[k]] = x[iout[k]] + rand([-pt:0.1:pt;])
             y[iout[k]] = y[iout[k]] + rand([-pt:0.1:pt;])
@@ -767,74 +776,26 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
 end
 
 
-function LOVOCLASS(data, nout, θ, ε1, ε2, ε=1.0e-4)
-    A = LOVOCGA(data, nout, θ, "AGCGA", "sphere")
-    sphere = A[1]
-    B = fittingclass(A[3], ε1, ε2)
-    if size(B, 2) == 2
-        C = LOVOCGA(data, nout, B[:, 2], "ICGA", "plane")
-        if A[4] < C[4]
-            return B[:, 1], C[1], C[3], C[4]
-        end
-        return B[:, 1], C[1], A[3], A[4]
-    end
-    return B[:, 1], A[3], A[4]
-end
-
-function LOVODETECTION2(data, nout, θ, ε1, ε2, ε=1.0e-4)
-    ordres = conformalsort(data, θ, nout)
-    k = 1
-    antres = 0.0
-    θfinal = θ  # Garante que θfinal seja sempre definido
-
-    while abs(ordres[2] - antres) > ε && k < 100
-        antres = ordres[2]
-        # Ajustando θ
-        θ = fittingclass(ordres[1], ε1, ε2)
-
-        # Se θ tiver duas colunas, calcular ordres para ambas
-        if size(θ, 2) == 2
-            ordres1 = conformalsort(data, θ[:, 1], nout)
-            ordres2 = conformalsort(data, θ[:, 2], nout)
-
-            # Escolhe o menor ordres[2] entre os dois vetores e define θ corretamente
-            if ordres1[2] < ordres2[2]
-                ordres = ordres2
-                θfinal = θ[:, 2]  # Mantém o θ correspondente
-            else
-                ordres = ordres1
-                θfinal = θ[:, 1]  # Mantém o θ correspondente
-            end
+function LOVOCLASSIFICATION(data, nout, θ, ε1, ε2, ε=1.0e-4)
+    A = LOVOAGCGA(data, nout, θ, "sphere")
+    B, λ1, λ2 = LOVOICGA(prob.data, prob.nout, ones(5), "reta")
+    sphere = transphere(A[1])
+    display(λ1)
+    display(λ2)
+    if 1 / sphere[end] < ε2
+        if λ2 - λ1 < ε1
+            return B[:, 1], B[:, 2], "line"
         else
-            ordres = conformalsort(data, θ, nout)
-            θfinal = θ  # Aqui agora garantimos que θfinal seja atualizado corretamente
+            return B[:, 1], 0.0, "plane"
         end
-        k = k + 1
     end
-
-    # Retornar θ original caso tivesse dois vetores, senão apenas um vetor
-    if size(θ, 2) == 2
-        return θ, k, ordres[1], ordres[2]  # Retorna ambos os vetores originais
+    if abs(A[2] - λ1) < ε1
+        return A[1], B[1], "circle"
     else
-        return θfinal, k, ordres[1], ordres[2]  # Retorna o único vetor escolhido
+        return A[1], 0.0, "sphere"
     end
 end
 
-
-
-function outliers(A, B)
-    (m, n) = size(A)
-    (x, n) = size(B)
-    H = zeros(m - x, n)
-    k = 1
-    for j = 1:m
-        if A[j, :] ∉ (B[i, :] for i = 1:x)
-            H[k, :] = A[j, :]
-            k = k + 1
-        end
-    end
-    return H
-end
 
 function fittingclass(data, ε1, ε2)
     (N, n) = size(data)
@@ -855,15 +816,17 @@ function fittingclass(data, ε1, ε2)
     F = eigen(P)
     λ1 = F.values[2]
     λ2 = F.values[3]
-    v1 = F.vectors[:, 2]
-    v2 = F.vectors[:, 3]
-    display(λ1)
-    display(λ2)
+    #display(λ1)
+    #display(λ2)
+    v1 = real(F.vectors[:, 2])
+    v2 = real(F.vectors[:, 3])
+    obj = ""
+    s1 = transphere(v1)
+
     if λ2 - λ1 > ε1
-        s1 = transphere(v1)
         if 1 / s1[end] > ε2
-            println("sphere")
-            return v1
+            obj = "sphere"
+            return v1, obj
         else
             B = IM[1:end-2, 1:end-2]
             u = IM[1:end-2, end-1]
@@ -874,12 +837,13 @@ function fittingclass(data, ε1, ε2)
             vn = Fv.vectors[:, 1]
             d = -(u' * vn) / a
             π = [vn; d; 0]
-            println("hyperplane")
-            return π
+            #println("hyperplane")
+            obj = "plane"
+            return π, obj
         end
     else
-        s1 = transphere(v1)
         s2 = transphere(v2)
+        #display(s1)
         if 1 / s1[end] < ε2
             B = IM[1:end-2, 1:end-2]
             u = IM[1:end-2, end-1]
@@ -893,8 +857,9 @@ function fittingclass(data, ε1, ε2)
             d2 = -(u' * vn2) / a
             π = [vn; d; 0]
             π2 = [vn2; d2; 0]
-            println("line")
-            return hcat(π, π2)
+            #println("line")
+            obj = "line"
+            return hcat(π, π2), obj
         else
             B = IM[1:end-2, 1:end-2]
             u = IM[1:end-2, end-1]
@@ -905,84 +870,12 @@ function fittingclass(data, ε1, ε2)
             vn = Fv.vectors[:, 1]
             d = -(u' * vn) / a
             π = [vn; d; 0]
-            println("hypercircle")
-            return hcat(v1, π)
+            #println("hypercircle")
+            obj = "circle"
+            return hcat(v1, π), obj
         end
     end
 end
-
-
-function visualize(prob, a)
-    pyplot()#beckendpyplot
-    plt = plot()
-    if prob.name == "sphere2D" || prob.name == "\tsphere2D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], line=:scatter, aspect_ratio=:equal, lab="pontos do problema")
-        θ = [0.0:2*π/360:2*π;]
-        xs = a[1] .+ a[3] * cos.(θ)
-        ys = a[2] .+ a[3] * sin.(θ)
-        x = prob.solution[1] .+ prob.solution[3] * cos.(θ)
-        y = prob.solution[2] .+ prob.solution[3] * sin.(θ)
-        plot!(plt, xs, ys, color=:red, lab="solução do algoritmo")
-        #plot!(plt, x, y, color=:green, lab="solução perfeita")
-        display(plt)
-    end
-    if prob.name == "sphere3D" || prob.name == "\tsphere3D"
-        plot!(plt, prob.data[:, 1], prob.data[:, 2], prob.data[:, 3], line=:scatter, aspect_ratio=:equal)#, lab="pontos do problema")
-        n = 20
-        u = range(0, stop=2 * pi, length=n)
-        v = range(0, stop=pi, length=n)
-        h1 = zeros(n)
-        h2 = zeros(n)
-        h3 = zeros(n)
-        h4 = zeros(n)
-        h5 = zeros(n)
-        h6 = zeros(n)
-        for i = 1:n
-            h1[i] = prob.solution[1]
-            h2[i] = prob.solution[2]
-            h3[i] = prob.solution[3]
-            h4[i] = a[1]
-            h5[i] = a[2]
-            h6[i] = a[3]
-        end
-        #x = h1 .+ prob.solution[4] * cos.(u) * sin.(v)'
-        #y = h2 .+ prob.solution[4] * sin.(u) * sin.(v)'
-        #z = h3 .+ prob.solution[4] * cos.(v)'
-        xs = h4 .+ a[4] * cos.(u) * sin.(v)'
-        ys = h5 .+ a[4] * sin.(u) * sin.(v)'
-        zs = h6 .+ a[4] * cos.(v)'
-        wireframe!(xs, ys, zs, aspect_ratio=:equal, color=:red)#, label="CGA")
-        #wireframe!(x, y, z, aspect_ratio=:equal, color=:red, label="LOVO-CGA")
-        return plt
-    end
-    if prob.name == "circle3d" || prob.name == "\tcircle3d"
-        vn = [a[1], a[2], a[3]]
-        u = [-a[2], a[1], 0.0]
-        v = [0.0, a[3], -a[2]]
-        u = u / norm(u)
-        h = v - (dot(v, u) / norm(u)^2) * u
-        v = h / norm(h)
-        uprob = prob.description[1]
-        vprob = prob.description[2]
-        sol = prob.solution
-        θ = [0.0:2*π/360:2*π;]
-        xprob = sol[1] .+ sol[4] * (cos.(θ)) * uprob[1] .+ sol[4] * (sin.(θ)) * vprob[1]
-        yprob = sol[2] .+ sol[4] * (cos.(θ)) * uprob[2] .+ sol[4] * (sin.(θ)) * vprob[2]
-        zprob = sol[3] .+ sol[4] * (cos.(θ)) * uprob[3] .+ sol[4] * (sin.(θ)) * vprob[3]
-        x = a[4] .+ a[7] * (cos.(θ)) * u[1] .+ a[7] * (sin.(θ)) * v[1]
-        y = a[5] .+ a[7] * (cos.(θ)) * u[2] .+ a[7] * (sin.(θ)) * v[2]
-        z = a[6] .+ a[7] * (cos.(θ)) * u[3] .+ a[7] * (sin.(θ)) * v[3]
-        plot!(plt, xprob, yprob, zprob, camera=(20, 50), color=:green, lab="solução perfeita")
-        plot!(plt, x, y, z, camera=(20, 50), color=:red, lab="solução do algoritmo") #usar camera=(100,40) pro nout=20
-        display(plt)
-    end
-
-
-end
-
-
-
-
 
 function show(io::IO, fout::FitOutputType)
 
