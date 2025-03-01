@@ -385,9 +385,9 @@ function LOVOICGA(data, nout, θ, object, ε=1.0e-4)
         antres = ordres[2]
         θ, λ1, λ2 = ICGA(ordres[1], object)
         if size(θ, 2) == 2
-            ordres = conformalsort(data, θ[:, 1], nout)
+            ordres = conformalsort2(data, θ[:, 1], θ[:, 2], nout)
         else
-            ordres = conformalsort2(data, θ[:, 1], θ[:,2], nout)
+            ordres = conformalsort(data, θ[:, 1], nout)
         end
     end
     return θ, λ1, λ2#, ordres[2]
