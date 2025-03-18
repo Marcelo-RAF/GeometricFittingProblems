@@ -200,6 +200,7 @@ function ICGA(data, object::String)
         B = Dd[1:end-2, 1:end-2]
         u = Dd[1:end-2, end-1]
         a = Dd[end-1, end-1]
+        #display(a)
         a2 = Dd[end-1, end]
         H = B - (u * u') / a
         F = eigen(H)
@@ -219,7 +220,6 @@ function ICGA(data, object::String)
         a2 = Dd[end-1, end]
         H = B - (u * u') / a
         F = eigen(H)
-        display(F)
         vn = F.vectors[:, 1]
         vn2 = F.vectors[:, 2]
         λ1 = F.values[1]
@@ -310,7 +310,7 @@ function conformalsort2(P, x, y, nout)
     end
     #    println(indtrust[n-nout+1:n])
 
-    return P[indtrust[1:m-nout], :], sum(h[1:m-nout]), P[indtrust[(m-nout)+1:m], :]
+    return P[indtrust[1:m-nout], :], sum(h[1:m-nout])#, P[indtrust[(m-nout)+1:m], :]
 end
 
 
@@ -372,8 +372,24 @@ function LOVOAGCGA(data, nout, θ, object, ε=1.0e-4)
         ordres = conformalsort(data, θ, nout)
         k = k + 1
     end
-    return θ, eig1, eig2, ordres[2]
+    return θ, eig1, eig2#, ordres[1], ordres[3]
 end
+
+function LOVOAGCGA_2(data, nout, θ, object, ε=1.0e-4)
+    ordres = conformalsort(data, θ, nout)
+    k = 1
+    antres = 0.0
+    eig1 = 0.0
+    eig2 = 0.0
+    while abs(ordres[2] - antres) > ε && k < 100
+        antres = ordres[2]
+        θ, eig1, eig2 = AGCGA(ordres[1], object)
+        ordres = conformalsort(data, θ, nout)
+        k = k + 1
+    end
+    return θ, k, ordres[1], ordres[2]
+end
+
 
 function LOVOICGA(data, nout, θ, object, ε=1.0e-4)
     ordres = conformalsort(data, θ, nout)
@@ -389,10 +405,29 @@ function LOVOICGA(data, nout, θ, object, ε=1.0e-4)
         else
             ordres = conformalsort(data, θ[:, 1], nout)
         end
+        k = k + 1
     end
-    return θ, λ1, λ2#, ordres[2]
+    return θ, λ1, λ2, ordres[2]#, ordres[3]
 end
 
+function LOVOICGA_2(data, nout, θ, object, ε=1.0e-4)
+    ordres = conformalsort(data, θ, nout)
+    k = 1
+    antres = 0.0
+    λ1 = 0.0
+    λ2 = 0.0
+    while abs(ordres[2] - antres) > ε && k < 100
+        antres = ordres[2]
+        θ = ICGA(ordres[1], object)
+        if size(θ, 2) == 2
+            ordres = conformalsort2(data, θ[:, 1], θ[:, 2], nout)
+        else
+            ordres = conformalsort(data, θ[:, 1], nout)
+        end
+        k = k + 1
+    end
+    return θ, k, ordres[1], ordres[2]
+end
 
 function transphere(np)
     npnorm = np / np[end]
@@ -726,6 +761,55 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
             writedlm(io, FileMatrix)
         end
     end
+    if probtype == "sphere3D3"
+        println("params need to be setup as [center,radious,npts,nout]")
+        c = [params[1], params[2], params[3]]
+        r = params[4]
+        npts = Int(params[5])
+        x = zeros(npts)
+        y = zeros(npts)
+        z = zeros(npts)
+
+        for k = 1:npts
+            θ = π / 2 * rand()  # Ângulo azimutal limitado ao primeiro quadrante
+            φ = π / 2 * rand()  # Ângulo polar limitado ao primeiro quadrante
+
+            x[k] = c[1] + r * sin(φ) * cos(θ)
+            y[k] = c[2] + r * sin(φ) * sin(θ)
+            z[k] = c[3] + r * cos(φ)
+        end
+
+        if noise == true
+            rd = randn(3, npts)  # Ruído normalmente distribuído
+            for k = 1:npts
+                x[k] = x[k] + rd[1, k]  # Adiciona ruído ao eixo x
+                y[k] = y[k] + rd[2, k]  # Adiciona ruído ao eixo y
+                z[k] = z[k] + rd[3, k]  # Adiciona ruído ao eixo z
+            end
+        end
+        nout = Int(params[6])
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        pt = 50
+        for k = 1:nout
+            x[iout[k]] = x[iout[k]] + rand([-pt:0.1:pt;])
+            y[iout[k]] = y[iout[k]] + rand([-pt:0.1:pt;])
+            z[iout[k]] = z[iout[k]] + rand([-pt:0.1:pt;])
+        end
+
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" 0; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" noise; "solution :" [push!(c, r)]; "description :" [[c, c]]]
+
+        open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_0.csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+    end
     if probtype == "sphere3D"
         println("params need to be setup as [center,radious,npts,nout]")
         c = [params[1], params[2], params[3]]
@@ -773,26 +857,80 @@ function build_problem(probtype::String, params::Vector{Float64}, noise::Bool)
             writedlm(io, FileMatrix)
         end
     end
+    if probtype == "sphere3D4"
+        println("params need to be setup as [center,radious,npts,nout]")
+        c = [params[1], params[2], params[3]]
+        r = params[4]
+        npts = Int(params[5])
+        x = zeros(npts)
+        y = zeros(npts)
+        z = zeros(npts)
+
+        for k = 1:npts
+            θ = 2π * rand()  # Ângulo azimutal
+            φ = acos(2 * rand() - 1)  # Ângulo polar
+
+            x[k] = c[1] + r * sin(φ) * cos(θ)
+            y[k] = c[2] + r * sin(φ) * sin(θ)
+            z[k] = c[3] + r * cos(φ)
+        end
+
+        if noise == true
+            rd = 5 * randn(3, npts)  # Ruído multiplicado por um fator de 5
+            for k = 1:npts
+                x[k] = x[k] + rd[1, k]  # Adiciona ruído ao eixo x
+                y[k] = y[k] + rd[2, k]  # Adiciona ruído ao eixo y
+                z[k] = z[k] + rd[3, k]  # Adiciona ruído ao eixo z
+            end
+        end
+        nout = Int(params[6])
+        k = 1
+        iout = []
+        while k <= nout
+            i = rand([1:npts;])
+            if i ∉ iout
+                push!(iout, i)
+                k = k + 1
+            end
+        end
+        pt = 50
+        for k = 1:nout
+            x[iout[k]] = x[iout[k]] + rand([-pt:0.1:pt;])
+            y[iout[k]] = y[iout[k]] + rand([-pt:0.1:pt;])
+            z[iout[k]] = z[iout[k]] + rand([-pt:0.1:pt;])
+        end
+
+        FileMatrix = ["name :" "sphere3D"; "data :" [[x y z]]; "npts :" npts; "nout :" 0; "model :" "(x,t) -> (x[1]-t[1])^2 + (x[2]-t[2])^2 +(x[3]-t[3])^2 - t[4]^2"; "dim :" 4; "cluster :" "false"; "noise :" noise; "solution :" [push!(c, r)]; "description :" [[c, c]]]
+
+        open("sphere3D_$(c[1])_$(c[2])_$(c[3])_$(c[4])_0.csv", "w") do io
+            writedlm(io, FileMatrix)
+        end
+    end
 end
 
 
 function LOVOCLASSIFICATION(data, nout, θ, ε1, ε2, ε=1.0e-4)
     A = LOVOAGCGA(data, nout, θ, "sphere")
     B, λ1, λ2 = LOVOICGA(prob.data, prob.nout, ones(5), "reta")
+    C, nl1, nl2 = LOVOICGA(prob.data, prob.nout, ones(5), "plane")
     sphere = transphere(A[1])
-    display(λ1)
-    display(λ2)
+    #display(nl1)
+    #display(λ2)
     if 1 / sphere[end] < ε2
         if λ2 - λ1 < ε1
-            return B[:, 1], B[:, 2], "line"
+            res = conformalsort2(prob.data, B[:, 1], B[:, 2], prob.nout)
+            return B[:, 1], B[:, 2], res[2], "line"
         else
-            return B[:, 1], 0.0, "plane"
+            res = conformalsort(prob.data, C[:, 1], prob.nout)
+            return C[:, 1], 0.0, res[2], "plane"
         end
     end
-    if abs(A[2] - λ1) < ε1
-        return A[1], B[1], "circle"
+    if abs(A[2] - nl1) < ε1
+        res = conformalsort2(prob.data, A[1], B[:, 1], prob.nout)
+        return A[1], B[:, 1], res[2], "circle"
     else
-        return A[1], 0.0, "sphere"
+        res = conformalsort(prob.data, A[1], prob.nout)
+        return A[1], 0.0, res[2], "sphere"
     end
 end
 
@@ -876,6 +1014,29 @@ function fittingclass(data, ε1, ε2)
         end
     end
 end
+
+function ajtclass(data, ε1, ε2)
+    sph, λ1 = AGCGA(prob.data, "sphere")
+    sphere = transphere(sph)
+    lin, λ2, λ3 = ICGA(prob.data, "reta")
+    #display(λ1)
+    #display(λ2)
+    #display(λ3)
+    if 1 / sphere[end] < ε2
+        if λ3 - λ2 < ε1
+            return lin, "reta"
+        else
+            return lin[:, 1], "plano"
+        end
+    end
+    if abs(λ2 - λ1) < ε1
+        return hcat(sph, lin[:, 1]), "circle"
+    else
+        return sph, "sphere"
+    end
+end
+
+
 
 function show(io::IO, fout::FitOutputType)
 
