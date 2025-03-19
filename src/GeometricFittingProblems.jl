@@ -194,7 +194,7 @@ function ICGA(data, object::String)
         #p = np / np[end]
         #centernp = np[1:end-2]
         #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-        return np
+        return np, 0.0, 0.0
     end
     if object == "plane"
         B = Dd[1:end-2, 1:end-2]
@@ -213,7 +213,7 @@ function ICGA(data, object::String)
 
         return π, λ1, λ2#, coef
     end
-    if object == "reta"
+    if object == "line"
         B = Dd[1:end-2, 1:end-2]
         u = Dd[1:end-2, end-1]
         a = Dd[end-1, end-1]
@@ -228,6 +228,7 @@ function ICGA(data, object::String)
         d2 = -(u' * vn2) / a
         π = [vn; d; 0]
         pi2 = [vn2; d2; 0]
+
         return hcat(π, pi2), λ1, λ2
     end
     if object == "circle"
@@ -242,7 +243,7 @@ function ICGA(data, object::String)
         Px = copy(Dd)
         Px[end, :] .= 0.0
         np = nullspace(Px)
-        return hcat(np, π)
+        return hcat(np, π), 0.0, 0.0
     end
 end
 
@@ -310,7 +311,7 @@ function conformalsort2(P, x, y, nout)
     end
     #    println(indtrust[n-nout+1:n])
 
-    return P[indtrust[1:m-nout], :], sum(h[1:m-nout])#, P[indtrust[(m-nout)+1:m], :]
+    return P[indtrust[1:m-nout], :], sum(h[1:m-nout]), P[indtrust[(m-nout)+1:m], :]
 end
 
 
@@ -348,7 +349,7 @@ function LOVOCGA(data, nout, θ, name, object, ε=1.0e-4)
             ordres = conformalsort(data, θ, nout)
         end
         if name == "ICGA"
-            θ = ICGA(ordres[1], object)
+            θ, eig1, eig2 = ICGA(ordres[1], object)
             if size(θ, 2) == 2
                 ordres = conformalsort2(data, θ[:, 1], θ[:, 2], nout)
             else
@@ -357,7 +358,7 @@ function LOVOCGA(data, nout, θ, name, object, ε=1.0e-4)
         end
         k = k + 1
     end
-    return θ, eig1, eig2, k, ordres[2], ordres[1], ordres[3]
+    return θ, k, ordres[2], ordres[1], ordres[3]
 end
 
 function LOVOAGCGA(data, nout, θ, object, ε=1.0e-4)
@@ -911,7 +912,7 @@ end
 
 function LOVOCLASSIFICATION(data, nout, θ, ε1, ε2, ε=1.0e-4)
     A = LOVOAGCGA(data, nout, θ, "sphere")
-    B, λ1, λ2 = LOVOICGA(prob.data, prob.nout, ones(5), "reta")
+    B, λ1, λ2 = LOVOICGA(prob.data, prob.nout, ones(5), "line")
     C, nl1, nl2 = LOVOICGA(prob.data, prob.nout, ones(5), "plane")
     sphere = transphere(A[1])
     #display(nl1)
@@ -936,97 +937,17 @@ end
 
 
 function fittingclass(data, ε1, ε2)
-    (N, n) = size(data)
-    v = [0.5 * norm(data[i, :], 2)^2 for i = 1:N]
-    D = [data'; v'; ones(1, N)]
-    J = copy(D')
-    H = -copy(J[:, n+1])
-    J[:, n+1] = -J[:, n+2]
-    J[:, n+2] = H
-    DDt = D * D'
-    p = (1.0 / N)
-    aux = -copy(DDt[:, n+1])
-    DDt[:, n+1] = -DDt[:, n+2]
-    DDt[:, n+2] = aux
-    P = p .* (DDt)
-    IM = copy(P)
-    IM[[end - 1, end], :] = -P[[end, end - 1], :]
-    F = eigen(P)
-    λ1 = F.values[2]
-    λ2 = F.values[3]
-    #display(λ1)
-    #display(λ2)
-    v1 = real(F.vectors[:, 2])
-    v2 = real(F.vectors[:, 3])
-    obj = ""
-    s1 = transphere(v1)
-
-    if λ2 - λ1 > ε1
-        if 1 / s1[end] > ε2
-            obj = "sphere"
-            return v1, obj
-        else
-            B = IM[1:end-2, 1:end-2]
-            u = IM[1:end-2, end-1]
-            w = IM[1:end-2, end]
-            a = IM[end-1, end-1]
-            Hm = B - (u * u') / a
-            Fv = eigen(Hm)
-            vn = Fv.vectors[:, 1]
-            d = -(u' * vn) / a
-            π = [vn; d; 0]
-            #println("hyperplane")
-            obj = "plane"
-            return π, obj
-        end
-    else
-        s2 = transphere(v2)
-        #display(s1)
-        if 1 / s1[end] < ε2
-            B = IM[1:end-2, 1:end-2]
-            u = IM[1:end-2, end-1]
-            w = IM[1:end-2, end]
-            a = IM[end-1, end-1]
-            Hm = B - (u * u') / a
-            Fv = eigen(Hm)
-            vn = Fv.vectors[:, 1]
-            vn2 = Fv.vectors[:, 2]
-            d = -(u' * vn) / a
-            d2 = -(u' * vn2) / a
-            π = [vn; d; 0]
-            π2 = [vn2; d2; 0]
-            #println("line")
-            obj = "line"
-            return hcat(π, π2), obj
-        else
-            B = IM[1:end-2, 1:end-2]
-            u = IM[1:end-2, end-1]
-            w = IM[1:end-2, end]
-            a = IM[end-1, end-1]
-            Hm = B - (u * u') / a
-            Fv = eigen(Hm)
-            vn = Fv.vectors[:, 1]
-            d = -(u' * vn) / a
-            π = [vn; d; 0]
-            #println("hypercircle")
-            obj = "circle"
-            return hcat(v1, π), obj
-        end
-    end
-end
-
-function ajtclass(data, ε1, ε2)
     sph, λ1 = AGCGA(prob.data, "sphere")
     sphere = transphere(sph)
-    lin, λ2, λ3 = ICGA(prob.data, "reta")
+    lin, λ2, λ3 = ICGA(prob.data, "line")
     #display(λ1)
     #display(λ2)
     #display(λ3)
     if 1 / sphere[end] < ε2
         if λ3 - λ2 < ε1
-            return lin, "reta"
+            return lin, "line"
         else
-            return lin[:, 1], "plano"
+            return lin[:, 1], "plane"
         end
     end
     if abs(λ2 - λ1) < ε1
