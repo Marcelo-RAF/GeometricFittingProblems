@@ -97,7 +97,7 @@ function AGCGA(data, object::String, ε=1.0e-5) #algoritmo dorst esferas
     P = p .* (DDt)
     F = eigen(P)
     if object == "sphere" || object == "plane"
-        return F.vectors[:, 2], F.values[2], F.values[3]
+        return F.vectors[:, 2], F.values[2]
     end
     if object == "line" || object == "circle"
         return F.vectors[:, 2], F.vectors[:, 3]
@@ -345,15 +345,15 @@ function LOVOCGA(data, nout, θ, name, object, ε=1.0e-4)
             ordres = conformalsort(data, θ, nout)
         end
         if name == "AGCGA"
-            θ, eig1, eig2 = AGCGA(ordres[1], object)
-            ordres = conformalsort(data, θ, nout)
+            θ = AGCGA(ordres[1], object)
+            ordres = conformalsort(data, θ[1], nout)
         end
         if name == "ICGA"
-            θ, eig1, eig2 = ICGA(ordres[1], object)
+            θ = ICGA(ordres[1], object)
             if size(θ, 2) == 2
-                ordres = conformalsort2(data, θ[:, 1], θ[:, 2], nout)
+                ordres = conformalsort2(data, θ[1][:, 1], θ[1][:, 2], nout)
             else
-                ordres = conformalsort(data, θ, nout)
+                ordres = conformalsort(data, θ[1], nout)
             end
         end
         k = k + 1
@@ -366,14 +366,13 @@ function LOVOAGCGA(data, nout, θ, object, ε=1.0e-4)
     k = 1
     antres = 0.0
     eig1 = 0.0
-    eig2 = 0.0
     while abs(ordres[2] - antres) > ε && k < 100
         antres = ordres[2]
-        θ, eig1, eig2 = AGCGA(ordres[1], object)
+        θ, eig1 = AGCGA(ordres[1], object)
         ordres = conformalsort(data, θ, nout)
         k = k + 1
     end
-    return θ, eig1, eig2#, ordres[1], ordres[3]
+    return θ, eig1#, ordres[1], ordres[3]
 end
 
 function LOVOAGCGA_2(data, nout, θ, object, ε=1.0e-4)
@@ -408,7 +407,7 @@ function LOVOICGA(data, nout, θ, object, ε=1.0e-4)
         end
         k = k + 1
     end
-    return θ, λ1, λ2, ordres[2]#, ordres[3]
+    return θ, λ1, λ2#, ordres[2]#, ordres[3]
 end
 
 function LOVOICGA_2(data, nout, θ, object, ε=1.0e-4)
@@ -940,9 +939,6 @@ function fittingclass(data, ε1, ε2)
     sph, λ1 = AGCGA(prob.data, "sphere")
     sphere = transphere(sph)
     lin, λ2, λ3 = ICGA(prob.data, "line")
-    #display(λ1)
-    #display(λ2)
-    #display(λ3)
     if 1 / sphere[end] < ε2
         if λ3 - λ2 < ε1
             return lin, "line"
