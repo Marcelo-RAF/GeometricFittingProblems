@@ -2,10 +2,9 @@ module GeometricFittingProblems
 
 using DelimitedFiles, LinearAlgebra, Plots
 
-export load_problem, solve, build_problem, visualize, FitProbType, FitOutputType, sort_funcion_res, AACGA, AGCGA, ICGA, LOVOCGA
+export load_problem, build_problem, FitProbType, FitOutputType, AACGA, AGCGA, ICGA, LOVOCGA, LOVOCLASSIFICATION, fittingclass
 
 import Base.show
-
 
 """
     FitProbType
@@ -183,25 +182,35 @@ returns a vector
 ```
 """
 
+
 function ICGA(data, object::String)
     (N, n) = size(data)
     v = [-0.5 * norm(data[i, :], 2)^2 for i = 1:N]
-    D = [data'; -ones(1, N); v']
-    Dd = 1 / N * simetrica(D)
+    D = [data'; -ones(1, N); v']  # D tem dimensão (n+2) × N
+
     if object == "sphere"
-        Dd[end, :] .= 0.0
-        np = nullspace(Dd)
-        #p = np / np[end]
-        #centernp = np[1:end-2]
-        #s = push!(centernp, √(norm(centernp, 2)^2 - 2.0 * np[end-1]))
-        return np, 0.0, 0.0
+        # Calcula Ds diretamente: D[1:end-1, :] * D[1:end-1, :]' / N
+        Ds = (D[1:end-1, :] * D[1:end-1, :]') / N
+
+        # Calcula b como um vetor linha: D[end:end, :] * D[1:end-1, :]' / N
+        b = (D[end:end, :] * D[1:end-1, :]') / N  # Note D[end:end, :] para manter a dimensão de linha
+
+        # Resolve o sistema (transpor b para virar um vetor coluna)
+        x = Ds \ -b'
+        return [x; 1.0]
     end
     if object == "plane"
-        B = Dd[1:end-2, 1:end-2]
-        u = Dd[1:end-2, end-1]
-        a = Dd[end-1, end-1]
-        #display(a)
-        a2 = Dd[end-1, end]
+        # Calcula B diretamente: D[1:end-2, :] * D[1:end-2, :]' / N
+        B = (D[1:end-2, :] * D[1:end-2, :]') / N
+
+        # Calcula u diretamente: D[1:end-2, :] * D[end-1, :]' / N
+        u = (D[1:end-2, :] * D[end-1:end-1, :]') / N  # Usamos end-1:end-1 para manter como matriz linha
+
+        # Calcula a diretamente: D[end-1, :] * D[end-1, :]' / N
+        a = (D[end-1:end-1, :]*D[end-1:end-1, :]')[1] / N  # Extrai o único elemento
+
+        # Calcula a2 diretamente: D[end-1, :] * D[end, :]' / N
+        # Restante do algoritmo (igual ao original)
         H = B - (u * u') / a
         F = eigen(H)
         vn = F.vectors[:, 1]
@@ -209,15 +218,21 @@ function ICGA(data, object::String)
         λ2 = F.values[2]
         d = -(u' * vn) / a
         π = [vn; d; 0]
-        #coef = (-w'*vn)/a2
 
-        return π, λ1, λ2#, coef
+        return π, λ1, λ2
     end
     if object == "line"
-        B = Dd[1:end-2, 1:end-2]
-        u = Dd[1:end-2, end-1]
-        a = Dd[end-1, end-1]
-        a2 = Dd[end-1, end]
+        # Calcula B diretamente: D[1:end-2, :] * D[1:end-2, :]' / N
+        B = (D[1:end-2, :] * D[1:end-2, :]') / N
+
+        # Calcula u diretamente: D[1:end-2, :] * D[end-1, :]' / N
+        u = (D[1:end-2, :] * D[end-1:end-1, :]') / N  # Usamos end-1:end-1 para manter como matriz linha
+
+        # Calcula a diretamente: D[end-1, :] * D[end-1, :]' / N
+        a = (D[end-1:end-1, :]*D[end-1:end-1, :]')[1] / N  # Extrai o único elemento
+
+        # Calcula a2 diretamente: D[end-1, :] * D[end, :]' / N
+        # Restante do algoritmo (igual ao original)
         H = B - (u * u') / a
         F = eigen(H)
         vn = F.vectors[:, 1]
@@ -232,20 +247,35 @@ function ICGA(data, object::String)
         return hcat(π, pi2), λ1, λ2
     end
     if object == "circle"
-        B = Dd[1:end-2, 1:end-2]
-        u = Dd[1:end-2, end-1]
-        a = Dd[end-1, end-1]
+        Ds = (D[1:n+1, :] * D[1:n+1, :]') / N  # Ds é (n+1)×(n+1)
+
+        # b = (D[end, :] * D[1:end-1, :]') / N  (forma vetor linha)
+        b = (D[end:end, :] * D[1:n+1, :]') / N  # b é 1×(n+1)
+        x = Ds \ -b'  # Resolve o sistema
+
+        x = [x; 1]
+
+        # --- Cálculo de π (geometria do plano) ---
+        # B = (D[1:end-2, :] * D[1:end-2, :]') / N  (submatriz sem as duas últimas linhas/colunas)
+        B = (D[1:n, :] * D[1:n, :]') / N  # B é n×n
+
+        # u = (D[1:end-2, :] * D[end-1, :]') / N
+        u = (D[1:n, :] * D[n+1:n+1, :]') / N  # u é n×1
+
+        # a = (D[end-1, :] * D[end-1, :]')[1] / N
+        a = (D[n+1:n+1, :]*D[n+1:n+1, :]')[1] / N  # Escalar
+
+        # a2 não é necessário para π, apenas se usado em 'coef'
         H = B - (u * u') / a
         F = eigen(H)
         vn = F.vectors[:, 1]
         d = -(u' * vn) / a
         π = [vn; d; 0]
-        Px = copy(Dd)
-        Px[end, :] .= 0.0
-        np = nullspace(Px)
-        return hcat(np, π), 0.0, 0.0
+        return hcat(x, π), 0.0, 0.0
     end
 end
+
+
 
 function conformalsort(P, x, nout)
     (m, n) = size(P)
@@ -317,7 +347,7 @@ end
 
 
 """
-LOVOCGA(data, nout, θ, nome, ε=1.0e-5)
+LOVOCGA(data, nout, θ, nome, ε=1.0e-4)
 
 Essa função recebe de parâmetros de entrada pontos de um espaço euclidiano, uma quantidade de pontos não confiáveis, um chute inicial e aproximação desejada, se é algébrica ou geométrica. A função funciona eliminando os outliers por meio do número de pontos não confiáveis do problema e retornando a melhor aproximação possível dentro do conjunto {hiperplanos, hipercírculos, hiperesferas, hiperetas.} 
 
@@ -350,7 +380,7 @@ function LOVOCGA(data, nout, θ, name, object, ε=1.0e-4)
         end
         if name == "ICGA"
             θ = ICGA(ordres[1], object)
-            if size(θ, 2) == 2
+            if size(θ[1], 2) == 2
                 ordres = conformalsort2(data, θ[1][:, 1], θ[1][:, 2], nout)
             else
                 ordres = conformalsort(data, θ[1], nout)
@@ -358,7 +388,7 @@ function LOVOCGA(data, nout, θ, name, object, ε=1.0e-4)
         end
         k = k + 1
     end
-    return θ, k, ordres[2], ordres[1], ordres[3]
+    return θ, k, ordres[2], ordres[1]
 end
 
 function LOVOAGCGA(data, nout, θ, object, ε=1.0e-4)
@@ -374,22 +404,6 @@ function LOVOAGCGA(data, nout, θ, object, ε=1.0e-4)
     end
     return θ, eig1#, ordres[1], ordres[3]
 end
-
-function LOVOAGCGA_2(data, nout, θ, object, ε=1.0e-4)
-    ordres = conformalsort(data, θ, nout)
-    k = 1
-    antres = 0.0
-    eig1 = 0.0
-    eig2 = 0.0
-    while abs(ordres[2] - antres) > ε && k < 100
-        antres = ordres[2]
-        θ, eig1, eig2 = AGCGA(ordres[1], object)
-        ordres = conformalsort(data, θ, nout)
-        k = k + 1
-    end
-    return θ, k, ordres[1], ordres[2]
-end
-
 
 function LOVOICGA(data, nout, θ, object, ε=1.0e-4)
     ordres = conformalsort(data, θ, nout)
@@ -408,25 +422,6 @@ function LOVOICGA(data, nout, θ, object, ε=1.0e-4)
         k = k + 1
     end
     return θ, λ1, λ2#, ordres[2]#, ordres[3]
-end
-
-function LOVOICGA_2(data, nout, θ, object, ε=1.0e-4)
-    ordres = conformalsort(data, θ, nout)
-    k = 1
-    antres = 0.0
-    λ1 = 0.0
-    λ2 = 0.0
-    while abs(ordres[2] - antres) > ε && k < 100
-        antres = ordres[2]
-        θ = ICGA(ordres[1], object)
-        if size(θ, 2) == 2
-            ordres = conformalsort2(data, θ[:, 1], θ[:, 2], nout)
-        else
-            ordres = conformalsort(data, θ[:, 1], nout)
-        end
-        k = k + 1
-    end
-    return θ, k, ordres[1], ordres[2]
 end
 
 function transphere(np)
@@ -922,7 +917,7 @@ function LOVOCLASSIFICATION(data, nout, θ, ε1, ε2, ε=1.0e-4)
             return B[:, 1], B[:, 2], res[2], "line"
         else
             res = conformalsort(prob.data, C[:, 1], prob.nout)
-            return C[:, 1], 0.0, res[2], "plane"
+            return C[:, 1], res[2], "plane"
         end
     end
     if abs(A[2] - nl1) < ε1
@@ -930,7 +925,7 @@ function LOVOCLASSIFICATION(data, nout, θ, ε1, ε2, ε=1.0e-4)
         return A[1], B[:, 1], res[2], "circle"
     else
         res = conformalsort(prob.data, A[1], prob.nout)
-        return A[1], 0.0, res[2], "sphere"
+        return A[1], res[2], "sphere"
     end
 end
 
